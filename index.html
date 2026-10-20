@@ -1107,6 +1107,13 @@ if (!db.metas) db.metas = {mensal:[], supermeta:{valor:0,de:'',ate:'',label:''}}
       f.tipo = n.indexOf('credito')>=0 ? 'credito' : (n.indexOf('debito')>=0 ? 'debito' : 'outro'); ch = true;
     }
     if (!f.operadoras) { f.operadoras = []; ch = true; }
+    f.operadoras.forEach(function(o){
+      if (o.diasAntec==null) { o.diasAntec = 2; ch = true; }
+      if (f.tipo==='debito' && (!o.bandeiras || !o.bandeiras.length)) {
+        o.bandeiras = ['Visa','Mastercard','Elo','Amex','Hipercard'].map(function(n){ return {id:uid(), nome:n, taxa:(o.taxaValor===''||o.taxaValor==null)?'':o.taxaValor, taxas:[]}; });
+        ch = true;
+      }
+    });
   });
   if (ch) sdb();
 })();
@@ -1220,7 +1227,7 @@ function fpOp(f,opId){ return f ? ((f.operadoras||[]).find(function(o){return o.
 // Calcula taxa e valor líquido de um recebimento
 function payCalc(gross, info) {
   info = info||{}; gross = r2(gross);
-  var res = {gross:gross, taxa:0, liq:gross, card:false, antecipado:false, n:1, label:''};
+  var res = {gross:gross, taxa:0, liq:gross, card:false, antecipado:false, n:1, label:'', dias:2};
   var f = formaInfo(info.forma); if (!f) return res;
   var tipo = fpTipo(f), taxa = 0;
   if (tipo==='outro') {
@@ -1230,9 +1237,12 @@ function payCalc(gross, info) {
   } else {
     var op = fpOp(f, info.operadora); if (!op) return res;
     res.card = true; res.antecipado = !!op.antecipado; res.label = op.nome;
+    var dA = parseInt(op.diasAntec); res.dias = isNaN(dA) ? 2 : dA;
     if (tipo==='debito') {
-      var tv2 = parseFloat(op.taxaValor)||0;
+      var bd = (op.bandeiras||[]).find(function(x){return x.id===info.bandeira;});
+      var tv2 = bd && bd.taxa!=='' && bd.taxa!=null ? (parseFloat(bd.taxa)||0) : (parseFloat(op.taxaValor)||0);
       taxa = op.taxaTipo==='R$' ? tv2 : gross*tv2/100;
+      if (bd) res.label = op.nome+' · '+bd.nome;
     } else {
       var n = Math.min(21, Math.max(1, parseInt(info.parcelas)||1)); res.n = n;
       var b = (op.bandeiras||[]).find(function(x){return x.id===info.bandeira;});
@@ -1248,7 +1258,7 @@ function payCalc(gross, info) {
 function paySchedule(gross, base, info) {
   var pc = payCalc(gross, info);
   if (!pc.card || !base) return {pc:pc, items:[{k:0, v:pc.liq, venc:base, bruto:pc.gross, taxa:pc.taxa}]};
-  if (pc.antecipado) return {pc:pc, items:[{k:0, v:pc.liq, venc:addDaysStr(base,2), bruto:pc.gross, taxa:pc.taxa}]};
+  if (pc.antecipado) return {pc:pc, items:[{k:0, v:pc.liq, venc:addDaysStr(base,pc.dias), bruto:pc.gross, taxa:pc.taxa}]};
   var n=pc.n, first=addDaysStr(base,30), each=r2(pc.liq/n), eb=r2(pc.gross/n), et=r2(pc.taxa/n), items=[];
   for (var i=0;i<n;i++) {
     var last = i===n-1;
@@ -1289,7 +1299,7 @@ function payHint(gross, base, info, simple) {
   var t = 'Líquido <b>'+fmtM(pc.liq)+'</b>'+(pc.taxa?' (taxa '+fmtM(pc.taxa)+')':'');
   if (pc.card && !simple) {
     if (!base) t += ' · informe a data';
-    else if (pc.antecipado) t += ' · antecipado, lançado em '+fmtD(sc.items[0].venc);
+    else if (pc.antecipado) t += ' · antecipado (D+'+pc.dias+'), lançado em '+fmtD(sc.items[0].venc);
     else t += ' · '+sc.items.length+'x de '+fmtM(sc.items[0].v)+', 1ª em '+fmtD(sc.items[0].venc);
   }
   return t;
@@ -1298,7 +1308,8 @@ function cardInfoMissing(info) {
   var f = formaInfo(info.forma), t = fpTipo(f);
   if (t==='outro') return '';
   if (!info.operadora) return 'a operadora';
-  if (t==='credito') { if (!info.bandeira) return 'a bandeira'; if (!info.parcelas) return 'o número de parcelas'; }
+  if (!info.bandeira) return 'a bandeira';
+  if (t==='credito' && !info.parcelas) return 'o número de parcelas';
   return '';
 }
 // Campos de cartão reutilizáveis nos modais (mn, mre, re, or)
@@ -1315,12 +1326,12 @@ function renderCardFields(pfx, info) {
   if (t!=='outro') {
     var ops = f.operadoras||[];
     h += '<div class="fg" style="flex:1;min-width:130px"><label>Operadora *</label><select id="'+pfx+'-op"><option value="">— selecione —</option>'
-      + ops.map(function(o){ return '<option value="'+o.id+'"'+(o.id===info.operadora?' selected':'')+'>'+escA(o.nome)+(o.antecipado?' (antecipado)':'')+'</option>'; }).join('')
+      + ops.map(function(o){ return '<option value="'+o.id+'"'+(o.id===info.operadora?' selected':'')+'>'+escA(o.nome)+(o.antecipado?' (antecipado D+'+(o.diasAntec==null?2:o.diasAntec)+')':'')+'</option>'; }).join('')
       + '</select></div>';
+    var op = fpOp(f, info.operadora), bs = op ? (op.bandeiras||[]) : [];
+    h += '<div class="fg" style="flex:1;min-width:110px"><label>Bandeira *</label><select id="'+pfx+'-band"><option value="">—</option>'
+      + bs.map(function(b){ return '<option value="'+b.id+'"'+(b.id===info.bandeira?' selected':'')+'>'+escA(b.nome)+'</option>'; }).join('') + '</select></div>';
     if (t==='credito') {
-      var op = fpOp(f, info.operadora), bs = op ? (op.bandeiras||[]) : [];
-      h += '<div class="fg" style="flex:1;min-width:110px"><label>Bandeira *</label><select id="'+pfx+'-band"><option value="">—</option>'
-        + bs.map(function(b){ return '<option value="'+b.id+'"'+(b.id===info.bandeira?' selected':'')+'>'+escA(b.nome)+'</option>'; }).join('') + '</select></div>';
       var po = ''; for (var i=1;i<=21;i++) po += '<option value="'+i+'"'+(String(info.parcelas)===String(i)?' selected':'')+'>'+i+'x</option>';
       h += '<div class="fg" style="flex:0 0 84px"><label>Parcelas *</label><select id="'+pfx+'-parc"><option value="">—</option>'+po+'</select></div>';
     }
@@ -2004,11 +2015,11 @@ function renderRecRows() {
       var sub = '';
       if (rt!=='outro') {
         sub += '<select data-ri="'+i+'" data-field="operadora" style="width:auto;min-width:130px"'+(r.operadora?'':' class="rr-need"')+'><option value="">Operadora…</option>'
-          + (rf.operadoras||[]).map(function(o){ return '<option value="'+o.id+'"'+(o.id===r.operadora?' selected':'')+'>'+escA(o.nome)+(o.antecipado?' (antecipado)':'')+'</option>'; }).join('') + '</select>';
+          + (rf.operadoras||[]).map(function(o){ return '<option value="'+o.id+'"'+(o.id===r.operadora?' selected':'')+'>'+escA(o.nome)+(o.antecipado?' (antecipado D+'+(o.diasAntec==null?2:o.diasAntec)+')':'')+'</option>'; }).join('') + '</select>';
+        var rop = fpOp(rf, r.operadora);
+        sub += '<select data-ri="'+i+'" data-field="bandeira" style="width:auto;min-width:110px"'+(r.bandeira?'':' class="rr-need"')+'><option value="">Bandeira…</option>'
+          + (rop?(rop.bandeiras||[]):[]).map(function(b){ return '<option value="'+b.id+'"'+(b.id===r.bandeira?' selected':'')+'>'+escA(b.nome)+'</option>'; }).join('') + '</select>';
         if (rt==='credito') {
-          var rop = fpOp(rf, r.operadora);
-          sub += '<select data-ri="'+i+'" data-field="bandeira" style="width:auto;min-width:110px"'+(r.bandeira?'':' class="rr-need"')+'><option value="">Bandeira…</option>'
-            + (rop?(rop.bandeiras||[]):[]).map(function(b){ return '<option value="'+b.id+'"'+(b.id===r.bandeira?' selected':'')+'>'+escA(b.nome)+'</option>'; }).join('') + '</select>';
           var rpo = '<option value="">Parc.…</option>'; for (var pi=1;pi<=21;pi++) rpo += '<option value="'+pi+'"'+(String(r.parcelas)===String(pi)?' selected':'')+'>'+pi+'x</option>';
           sub += '<select data-ri="'+i+'" data-field="parcelas" style="width:auto"'+(r.parcelas?'':' class="rr-need"')+'>'+rpo+'</select>';
         }
@@ -3371,15 +3382,23 @@ function fpCadCells(a){
   var ops=a.operadoras||[];
   if(t==='outro') return '<td>'+lbl+'</td><td>'+(a.antecipado?'<span class="badge bg2">Antecipado</span>':'<span class="badge bz">Não antecipado</span>')+'</td><td style="font-family:var(--mo)">'+fmtTx(a.taxaTipo,a.taxaValor)+'</td>';
   if(!ops.length) return '<td>'+lbl+'</td><td colspan="2" style="color:var(--rd);font-size:12px">Cadastre as operadoras (Editar)</td>';
-  var rec=ops.map(function(o){return escA(o.nome)+' <span style="color:var(--tx3);font-size:11px">('+(o.antecipado?'antecipado':'não antec.')+')</span>';}).join('<br>');
-  var tx=ops.map(function(o){ return t==='debito' ? escA(o.nome)+': '+fmtTx(o.taxaTipo,o.taxaValor) : escA(o.nome)+': '+(o.bandeiras||[]).length+' bandeira(s), 1x–21x'; }).join('<br>');
+  var rec=ops.map(function(o){return escA(o.nome)+' <span style="color:var(--tx3);font-size:11px">('+(o.antecipado?'antecipado D+'+(o.diasAntec==null?2:o.diasAntec):'não antec.')+')</span>';}).join('<br>');
+  var tx=ops.map(function(o){ return escA(o.nome)+': '+(o.bandeiras||[]).length+' bandeira(s)'+(t==='credito'?', 1x–21x':''); }).join('<br>');
   return '<td>'+lbl+'</td><td style="font-size:12px">'+rec+'</td><td style="font-size:12px">'+tx+'</td>';
 }
 function fpEnsureBand(o){ if(!o.bandeiras) o.bandeiras=[]; o.bandeiras.forEach(function(b){ if(!b.taxas) b.taxas=[]; while(b.taxas.length<21) b.taxas.push(''); }); }
 function fpSel(path, val, opts){ return '<select data-fp="'+path+'" style="width:auto">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(val)===String(o[0])?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>'; }
+function fpOpHead(o,i,ANT,TT){
+  return '<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">'
+    +'<div class="fg" style="flex:1;min-width:160px"><label>Operadora</label><input type="text" data-fp="op.'+i+'.nome" value="'+escA(o.nome)+'" placeholder="Ex.: Stone"></div>'
+    +'<div class="fg"><label>Recebimento</label>'+fpSel('op.'+i+'.antecipado',o.antecipado?'1':'0',ANT)+'</div>'
+    +(o.antecipado?'<div class="fg"><label>Recebe em (dias após a venda)</label><input type="number" min="0" step="1" data-fp="op.'+i+'.diasAntec" value="'+(o.diasAntec==null?2:o.diasAntec)+'" style="width:110px"></div>':'')
+    +'<div class="fg"><label>Taxa em</label>'+fpSel('op.'+i+'.taxaTipo',o.taxaTipo||'%',TT)+'</div>'
+    +'<button type="button" class="btn bsm bd2" data-fpact="delop" data-i="'+i+'">Remover operadora</button></div>';
+}
 function renderFPEditor(){
   var d=fpDraft, el=G('ax-fp'); if(!el||!d) return;
-  G('m-aux').querySelector('.modal').style.maxWidth = d.tipo==='credito' ? '1150px' : (d.tipo==='debito' ? '700px' : '480px');
+  G('m-aux').querySelector('.modal').style.maxWidth = d.tipo==='credito' ? '1150px' : (d.tipo==='debito' ? '760px' : '480px');
   var ANT=[['0','Não antecipado'],['1','Antecipado']], TT=[['%','%'],['R$','R$']];
   var h='<div class="fg" style="margin-bottom:12px"><label>Tipo</label>'+fpSel('tipo',d.tipo,[['outro','Outra forma (PIX, boleto, dinheiro…)'],['debito','Cartão de Débito'],['credito','Cartão de Crédito']]).replace('width:auto','width:100%')+'</div>';
   if(d.tipo==='outro'){
@@ -3388,27 +3407,29 @@ function renderFPEditor(){
       +'<div class="fg"><label>Taxa em</label>'+fpSel('taxaTipo',d.taxaTipo||'%',TT)+'</div>'
       +'<div class="fg"><label>Valor da taxa</label><input type="number" min="0" step="0.01" data-fp="taxaValor" value="'+(d.taxaValor||'')+'" placeholder="0"></div></div>';
   } else if(d.tipo==='debito'){
-    h+='<div style="font-size:12px;color:var(--tx2);margin-bottom:6px">Uma linha por operadora de máquina de cartão.</div>'
-      +'<table style="font-size:12px"><thead><tr><th>Operadora</th><th>Recebimento</th><th>Taxa em</th><th>Taxa</th><th></th></tr></thead><tbody>';
+    h+='<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Para cada operadora, informe a taxa por bandeira.</div>';
     d.operadoras.forEach(function(o,i){
-      h+='<tr><td><input type="text" data-fp="op.'+i+'.nome" value="'+escA(o.nome)+'" placeholder="Ex.: Stone"></td>'
-        +'<td>'+fpSel('op.'+i+'.antecipado',o.antecipado?'1':'0',ANT)+'</td>'
-        +'<td>'+fpSel('op.'+i+'.taxaTipo',o.taxaTipo||'%',TT)+'</td>'
-        +'<td><input type="number" min="0" step="0.01" style="width:90px" data-fp="op.'+i+'.taxaValor" value="'+(o.taxaValor||'')+'" placeholder="0"></td>'
-        +'<td><button type="button" class="bic" data-fpact="delop" data-i="'+i+'">x</button></td></tr>';
+      if(!o.bandeiras) o.bandeiras=[];
+      h+='<div class="card" style="padding:12px;margin-bottom:12px">'+fpOpHead(o,i,ANT,TT)
+        +'<table style="font-size:12px"><thead><tr><th>Bandeira</th><th style="text-align:right">Taxa ('+(o.taxaTipo==='R$'?'R$':'%')+')</th><th></th></tr></thead><tbody>';
+      o.bandeiras.forEach(function(bd,j){
+        h+='<tr><td><input type="text" data-fp="op.'+i+'.b.'+j+'.nome" value="'+escA(bd.nome)+'" style="padding:4px 6px;font-size:12px"></td>'
+          +'<td><input type="number" min="0" step="0.01" data-fp="op.'+i+'.b.'+j+'.taxa" value="'+(bd.taxa===''||bd.taxa==null?'':bd.taxa)+'" style="width:100px;padding:4px 6px;font-size:12px;text-align:right" placeholder="0"></td>'
+          +'<td><button type="button" class="bic" data-fpact="delb" data-i="'+i+'" data-j="'+j+'">x</button></td></tr>';
+      });
+      if(!o.bandeiras.length) h+='<tr><td colspan="3" class="te">Nenhuma bandeira</td></tr>';
+      h+='</tbody></table><div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px">'
+        +'<div class="fa" data-fpact="addb" data-i="'+i+'">+ Adicionar bandeira</div>'
+        +(o.bandeiras.length>1?'<div class="fa" data-fpact="copyb" data-i="'+i+'">Copiar taxa da 1ª bandeira para as demais</div>':'')
+        +'</div></div>';
     });
-    if(!d.operadoras.length) h+='<tr><td colspan="5" class="te">Nenhuma operadora</td></tr>';
-    h+='</tbody></table><div class="fa" data-fpact="addop" style="margin-top:6px">+ Adicionar operadora</div>';
+    if(!d.operadoras.length) h+='<div class="te" style="padding:10px 0">Nenhuma operadora</div>';
+    h+='<div class="fa" data-fpact="addop">+ Adicionar operadora</div>';
   } else {
     h+='<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Para cada operadora, informe a taxa por bandeira e por número de parcelas (01x a 21x).</div>';
     d.operadoras.forEach(function(o,i){
       fpEnsureBand(o);
-      h+='<div class="card" style="padding:12px;margin-bottom:12px">'
-        +'<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">'
-        +'<div class="fg" style="flex:1;min-width:160px"><label>Operadora</label><input type="text" data-fp="op.'+i+'.nome" value="'+escA(o.nome)+'" placeholder="Ex.: Stone"></div>'
-        +'<div class="fg"><label>Recebimento</label>'+fpSel('op.'+i+'.antecipado',o.antecipado?'1':'0',ANT)+'</div>'
-        +'<div class="fg"><label>Taxa em</label>'+fpSel('op.'+i+'.taxaTipo',o.taxaTipo||'%',TT)+'</div>'
-        +'<button type="button" class="btn bsm bd2" data-fpact="delop" data-i="'+i+'">Remover operadora</button></div>'
+      h+='<div class="card" style="padding:12px;margin-bottom:12px">'+fpOpHead(o,i,ANT,TT)
         +'<div class="tw"><table style="font-size:11px;min-width:1500px"><thead><tr><th style="min-width:110px">Bandeira</th>';
       for(var n=1;n<=21;n++) h+='<th style="text-align:center;padding:4px 2px">'+String(n).padStart(2,'0')+'x</th>';
       h+='<th></th></tr></thead><tbody>';
@@ -3451,7 +3472,8 @@ function saveAux() {
     data.tipo=d.tipo; data.antecipado=!!d.antecipado; data.taxaTipo=d.taxaTipo||'%'; data.taxaValor=parseFloat(d.taxaValor)||0;
     data.operadoras=(d.operadoras||[]).map(function(o){
       var x={id:o.id||uid(), nome:(o.nome||'').trim(), antecipado:!!o.antecipado, taxaTipo:o.taxaTipo||'%', taxaValor:parseFloat(o.taxaValor)||0};
-      x.bandeiras=(o.bandeiras||[]).map(function(b){ return {id:b.id||uid(), nome:(b.nome||'').trim(), taxas:(b.taxas||[]).slice(0,21).map(function(t){ return (t===''||t==null)?'':(parseFloat(t)||0); })}; }).filter(function(b){ return b.nome; });
+      var dA=parseInt(o.diasAntec); x.diasAntec=isNaN(dA)?2:Math.max(0,dA);
+      x.bandeiras=(o.bandeiras||[]).map(function(b){ return {id:b.id||uid(), nome:(b.nome||'').trim(), taxa:(b.taxa===''||b.taxa==null)?'':(parseFloat(b.taxa)||0), taxas:(b.taxas||[]).slice(0,21).map(function(t){ return (t===''||t==null)?'':(parseFloat(t)||0); })}; }).filter(function(b){ return b.nome; });
       return x;
     });
     if(d.tipo!=='outro' && data.operadoras.some(function(o){return !o.nome;})){ showToast('Informe o nome de todas as operadoras'); return; }
@@ -4124,18 +4146,19 @@ document.addEventListener('DOMContentLoaded', function() {
   G('m-aux-cancel').addEventListener('click',function(){closeModal('m-aux');});
   G('m-aux-save').addEventListener('click',saveAux);
   G('m-aux-b').addEventListener('input',function(e){ var pth=e.target.getAttribute&&e.target.getAttribute('data-fp'); if(pth&&fpDraft) fpSet(pth,e.target.value); });
-  G('m-aux-b').addEventListener('change',function(e){ var pth=e.target.getAttribute&&e.target.getAttribute('data-fp'); if(pth&&fpDraft){ fpSet(pth,e.target.value); if(pth==='tipo') renderFPEditor(); } });
+  G('m-aux-b').addEventListener('change',function(e){ var pth=e.target.getAttribute&&e.target.getAttribute('data-fp'); if(pth&&fpDraft){ fpSet(pth,e.target.value); if(pth==='tipo' || /\.(antecipado|taxaTipo)$/.test(pth)) renderFPEditor(); } });
   G('m-aux-b').addEventListener('click',function(e){
     var a=e.target.closest('[data-fpact]'); if(!a||!fpDraft) return;
     var act=a.getAttribute('data-fpact'), i=+a.getAttribute('data-i'), j=+a.getAttribute('data-j'), ops=fpDraft.operadoras;
     if(act==='addop'){
       var no={id:uid(),nome:'',antecipado:false,taxaTipo:'%',taxaValor:''};
-      if(fpDraft.tipo==='credito'){ no.bandeiras=BANDEIRAS_PADRAO.map(function(n){return {id:uid(),nome:n,taxas:[]};}); fpEnsureBand(no); }
+      no.diasAntec=2;
+      if(fpDraft.tipo!=='outro'){ no.bandeiras=BANDEIRAS_PADRAO.map(function(n){return {id:uid(),nome:n,taxa:'',taxas:[]};}); fpEnsureBand(no); }
       ops.push(no);
     } else if(act==='delop') ops.splice(i,1);
-    else if(act==='addb'){ ops[i].bandeiras.push({id:uid(),nome:'',taxas:[]}); fpEnsureBand(ops[i]); }
+    else if(act==='addb'){ ops[i].bandeiras.push({id:uid(),nome:'',taxa:'',taxas:[]}); fpEnsureBand(ops[i]); }
     else if(act==='delb') ops[i].bandeiras.splice(j,1);
-    else if(act==='copyb'){ var bs=ops[i].bandeiras; for(var k=1;k<bs.length;k++) bs[k].taxas=bs[0].taxas.slice(); }
+    else if(act==='copyb'){ var bs=ops[i].bandeiras; for(var k=1;k<bs.length;k++){ bs[k].taxas=(bs[0].taxas||[]).slice(); bs[k].taxa=bs[0].taxa; } }
     renderFPEditor();
   });
 
