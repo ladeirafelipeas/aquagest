@@ -261,7 +261,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 21/10/2026 · 19:15</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 21/10/2026 · 19:45</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -2223,9 +2223,33 @@ function isRtCat(catId){ var c=gAux('catDespesas').find(function(x){return x.id=
 function recBaseTotal(){ var t=r2(recRows.reduce(function(a,r){ return a+(parseFloat(r.valor)||0); },0)); return t>0 ? t : (parseFloat((G('c-valor')||{}).value)||0); }
 function recBaseLbl(){ var t=recRows.reduce(function(a,r){ return a+(parseFloat(r.valor)||0); },0); return t>0 ? 'total de recebimento' : 'valor total da venda — sem parcelas em Recebimentos'; }
 function arqPctPadrao(){ var a=gAux('arquitetos').find(function(x){ return x.id===(G('c-arq')||{}).value; }); return a && parseFloat(a.commission) ? parseFloat(a.commission) : ''; }
-function rtDesc(r){ var a=gAux('arquitetos').find(function(x){ return x.id===(G('c-arq')||{}).value; }); return 'RT Arquiteto'+(hasV(r.rtPct)?' '+String(r.rtPct).replace('.',',')+'%':'')+(a?' — '+a.name:''); }
+// Categorias calculadas por % (RT Arquiteto, Club&Casa, Nota Fiscal/imposto)
+function pctCatType(catId){
+  var c=gAux('catDespesas').find(function(x){return x.id===catId;}); if(!c) return null;
+  var n=normTxt(c.name), j=n.replace(/[^a-z0-9]/g,'');
+  if (/^rt\b/.test(n) && /arquitet|parceir/.test(n)) return 'rt';
+  if (/clube?e?casa|clubcasa/.test(j)) return 'club';
+  if (/nota ?fiscal|imposto/.test(n)) return 'nf';
+  return null;
+}
+function isPctCat(catId){ return !!pctCatType(catId); }
+function pctPadrao(catId){
+  if (pctCatType(catId)==='rt') return arqPctPadrao();
+  var c=gAux('catDespesas').find(function(x){return x.id===catId;});
+  return c && hasV(c.pctUlt) ? c.pctUlt : '';
+}
+function rtDesc(r){
+  var pc = hasV(r.rtPct)?' '+String(r.rtPct).replace('.',',')+'%':'';
+  if (pctCatType(r.catId)!=='rt') { var c=gAux('catDespesas').find(function(x){return x.id===r.catId;}); return (c?c.name:'')+pc; }
+  var a=gAux('arquitetos').find(function(x){ return x.id===(G('c-arq')||{}).value; });
+  return 'RT Arquiteto'+pc+(a?' — '+a.name:'');
+}
 function renderExpRows() {
-  if (!gAux('catDespesas').some(function(c){ return normTxt(c.name)==='modelo'; })) { db.aux.catDespesas.push({id:uid(), name:'Modelo', active:true}); sdb(); }
+  var _ch=false;
+  if (!gAux('catDespesas').some(function(c){ return normTxt(c.name)==='modelo'; })) { db.aux.catDespesas.push({id:uid(), name:'Modelo', active:true}); _ch=true; }
+  if (!gAux('catDespesas').some(function(c){ return pctCatType(c.id)==='club'; })) { db.aux.catDespesas.push({id:uid(), name:'Club&Casa', active:true}); _ch=true; }
+  if (!gAux('catDespesas').some(function(c){ return pctCatType(c.id)==='nf'; })) { db.aux.catDespesas.push({id:uid(), name:'Nota Fiscal (imposto)', active:true}); _ch=true; }
+  if (_ch) sdb();
   var el = G('c-exp-rows');
   var cats = sortAlpha(gAux('catDespesas').filter(function(a){return a.active;}));
   if (!expRows.length) { el.innerHTML='<div style="color:var(--tx3);font-size:13px;padding:6px 0">Nenhuma despesa.</div>'; updExpTot(); return; }
@@ -2235,7 +2259,7 @@ function renderExpRows() {
     if (String(e.itemId||'').indexOf('mod:')===0 && /^Modelo /.test(e.desc||'')) e.desc = e.desc.replace(/^Modelo /,'');
     var catOpts = cats.map(function(c){return '<option value="'+c.id+'"'+(e.catId===c.id?' selected':'')+'>'+escA(c.name)+'</option>';}).join('');
     var opts = e.catId ? expItemOpts(e.catId) : [];
-    var rt = isRtCat(e.catId);
+    var rt = isPctCat(e.catId);
     var outro = !rt && (e.itemId==='__outro' || (!e.itemId && e.desc));
     var cur = opts.find(function(o){ return o.id===e.itemId; });
     var itemSel = rt ? '<div style="font-size:12px;color:var(--tx2)">'+escA(rtDesc(e))+'</div>'
@@ -2261,7 +2285,7 @@ function renderExpRows() {
       + '</div><div class="ersub">'
       + (outro ? '<input type="text" placeholder="Item" value="'+escA(e.desc||'')+'" data-ei="'+i+'" data-field="desc" style="flex:1;min-width:140px">' : '')
       + (rt
-        ? '<label>% RT</label><input type="number" min="0" step="0.01" value="'+(hasV(e.rtPct)?e.rtPct:'')+'" data-ei="'+i+'" data-field="rtPct" style="width:70px" placeholder="%">'
+        ? '<label>'+(pctCatType(e.catId)==='rt'?'% RT':'%')+'</label><input type="number" min="0" step="0.01" value="'+(hasV(e.rtPct)?e.rtPct:'')+'" data-ei="'+i+'" data-field="rtPct" style="width:70px" placeholder="%">'
           + '<span>× '+fmtM(recBaseTotal())+' <span style="color:var(--tx3)">('+recBaseLbl()+')</span></span>'
           + '<label>= Valor</label><input type="number" min="0" step="0.01" id="er-unit-'+i+'" value="'+(hasV(e.unit)?e.unit:'')+'" data-ei="'+i+'" data-field="unit" style="width:110px" placeholder="0,00">'
           + (hasV(e.rtPct) && Math.abs((parseFloat(e.unit)||0) - r2(recBaseTotal()*e.rtPct/100))>0.004 ? '<button type="button" class="btn bsm bs er-rt-recalc" data-ei="'+i+'" title="Recalcular com o total de recebimento atual">↻ Recalcular</button>' : '')
@@ -4370,11 +4394,12 @@ document.addEventListener('DOMContentLoaded', function() {
   // EXP ROWS delegation
   G('c-exp-rows').addEventListener('input', function(e){var t=e.target;var i=parseInt(t.getAttribute('data-ei'));if(isNaN(i))return;var f=t.getAttribute('data-field');if(!f)return;
     if(f==='itemTxt'){ expRows[i].desc=t.value; renderItemDrop(i); return; }
-    if(f==='rtPct'){ var r0=expRows[i]; r0.rtPct=t.value===''?'':(parseFloat(t.value)||0); r0.qtd=1; r0.unit=hasV(r0.rtPct)?r2(recBaseTotal()*r0.rtPct/100):''; r0.desc=rtDesc(r0); var ui=G('er-unit-'+i); if(ui) ui.value=r0.unit; updExpTot(); return; }
+    if(f==='rtPct'){ var r0=expRows[i]; r0.rtPct=t.value===''?'':(parseFloat(t.value)||0);
+      if(pctCatType(r0.catId)!=='rt'){ var cc0=gAux('catDespesas').find(function(x){return x.id===r0.catId;}); if(cc0) cc0.pctUlt=r0.rtPct; } r0.qtd=1; r0.unit=hasV(r0.rtPct)?r2(recBaseTotal()*r0.rtPct/100):''; r0.desc=rtDesc(r0); var ui=G('er-unit-'+i); if(ui) ui.value=r0.unit; updExpTot(); return; }
     if(f==='qtd'||f==='unit'){expRows[i][f]=t.value===''?'':(parseFloat(t.value)||0);updExpTot();} else if(f==='desc'||f==='data') expRows[i][f]=t.value;});
   G('c-exp-rows').addEventListener('change', function(e){var t=e.target;var i=parseInt(t.getAttribute('data-ei'));if(isNaN(i))return;var f=t.getAttribute('data-field');if(!f)return;var r=expRows[i];
     if(f==='catId'){ r.catId=t.value; r.itemId=''; r.precoTipo='normal'; r.desc=''; r.unidade=''; r.unit=''; r.rtPct='';
-      if(isRtCat(r.catId)){ r.qtd=1; r.rtPct=arqPctPadrao(); r.unit=hasV(r.rtPct)?r2(recBaseTotal()*r.rtPct/100):''; r.desc=rtDesc(r); }
+      if(isPctCat(r.catId)){ r.qtd=1; r.rtPct=pctPadrao(r.catId); r.unit=hasV(r.rtPct)?r2(recBaseTotal()*r.rtPct/100):''; r.desc=rtDesc(r); }
       renderExpRows(); return; }
     if(f==='itemTxt'){ applyItemTxt(i, t.value, true); return; }
     if(f==='itemId'){
@@ -4388,7 +4413,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if(f==='precoTipo'){ r.precoTipo=t.value; var o2=expItemOpts(r.catId).find(function(x){return x.id===r.itemId;}); if(o2) r.unit = t.value==='promo'?o2.precoPromo:o2.preco; renderExpRows(); return; }
     if(f==='rtPct'){ renderExpRows(); return; }
-    if(f==='qtd'||f==='unit'){ r[f]=t.value===''?'':(parseFloat(t.value)||0); updExpTot(); if(f==='unit'&&isRtCat(r.catId)) renderExpRows(); return; }
+    if(f==='qtd'||f==='unit'){ r[f]=t.value===''?'':(parseFloat(t.value)||0); updExpTot(); if(f==='unit'&&isPctCat(r.catId)) renderExpRows(); return; }
     r[f]=t.value; updExpTot();});
   G('c-exp-rows').addEventListener('click', function(e){var rc=e.target.closest('.er-rt-recalc'); if(rc){var r1=expRows[parseInt(rc.getAttribute('data-ei'))]; r1.unit=r2(recBaseTotal()*r1.rtPct/100); renderExpRows(); return;}
     var btn=e.target.closest('.er-del');if(btn){var i=parseInt(btn.getAttribute('data-ei'));expRows.splice(i,1);renderExpRows();}});
