@@ -622,8 +622,12 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div style="padding:20px" id="saldo-total-area"></div>
     </div>
     <div class="card">
-      <div class="ch">Caixas <button class="btn bp bsm" id="btn-novo-caixa" style="margin-left:auto">+ Novo Caixa</button></div>
+      <div class="ch">Caixas <div style="margin-left:auto;display:flex;gap:6px"><button class="btn bs bsm" id="btn-transf">&#8644; Transferir</button><button class="btn bp bsm" id="btn-novo-caixa">+ Novo Caixa</button></div></div>
       <div style="padding:16px" id="saldo-caixas-area"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="ch" id="transf-title">Transferências</div>
+      <div class="tw"><table><thead><tr><th>Data</th><th>De</th><th>Para</th><th style="text-align:right">Valor</th><th>Observação</th><th></th></tr></thead><tbody id="transf-tb"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -912,6 +916,24 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
 </div>
 
 <!-- MODAL EDITAR RECEBIMENTO -->
+<div id="m-parc" class="mov">
+<div class="modal" style="max-width:480px">
+  <div class="mh"><div class="mt2" id="mp-t">Parcela do cartão</div><button class="mx" id="mp-close">&#10005;</button></div>
+  <div class="mb">
+    <input type="hidden" id="mp-cid"><input type="hidden" id="mp-idx"><input type="hidden" id="mp-k">
+    <div class="alert ai" id="mp-info" style="margin-bottom:12px"></div>
+    <div class="fg3">
+      <div class="fg"><label>Valor recebido nesta parcela (R$)</label><input id="mp-val" type="number" min="0" step="0.01"></div>
+      <div class="fg"><label>Status</label><select id="mp-st"><option value="LANCADO">Lançado</option><option value="RECEBIDO">Recebido</option><option value="PREVISTO">Previsto</option></select></div>
+      <div class="fg"><label>Data efetiva</label><input id="mp-def" type="date"></div>
+      <div class="fg s2"><label>Observações</label><textarea id="mp-obs" rows="2"></textarea></div>
+    </div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:8px">Só esta parcela é alterada. Se o valor for diferente do previsto, a diferença é tratada como taxa financeira.</div>
+  </div>
+  <div class="mf"><button class="btn bs" id="mp-restore" style="margin-right:auto">Voltar ao previsto</button><button class="btn bs" id="mp-cancel">Cancelar</button><button class="btn bp" id="mp-save">Salvar parcela</button></div>
+</div>
+</div>
+
 <div id="m-rec" class="mov">
 <div class="modal" style="max-width:560px">
   <div class="mh"><div class="mt2">Editar Recebimento</div><button class="mx" id="m-rec-close">&#10005;</button></div>
@@ -940,6 +962,23 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
 </div>
 
 <!-- MODAL CAIXA -->
+<div id="m-transf" class="mov">
+<div class="modal" style="max-width:440px">
+  <div class="mh"><div class="mt2">Transferência</div><button class="mx" id="mt-close">&#10005;</button></div>
+  <div class="mb">
+    <div class="fg3">
+      <div class="fg"><label>De *</label><select id="mt-de"></select></div>
+      <div class="fg"><label>Para *</label><select id="mt-para"></select></div>
+      <div class="fg"><label>Valor (R$) *</label><input id="mt-valor" type="number" min="0" step="0.01" placeholder="0,00"></div>
+      <div class="fg"><label>Data *</label><input id="mt-data" type="date"></div>
+      <div class="fg s2"><label>Observação</label><input id="mt-obs" type="text" placeholder="Opcional"></div>
+    </div>
+    <div id="mt-info" style="font-size:12px;color:var(--tx2);margin-top:8px"></div>
+  </div>
+  <div class="mf"><button class="btn bs" id="mt-cancel">Cancelar</button><button class="btn bp" id="mt-save">Transferir</button></div>
+</div>
+</div>
+
 <div id="m-caixa" class="mov">
 <div class="modal" style="max-width:400px">
   <div class="mh"><div class="mt2" id="m-caixa-t">Novo Caixa</div><button class="mx" id="m-caixa-close">&#10005;</button></div>
@@ -1078,6 +1117,7 @@ function isProdFunc(f){ return f && PROD_FUNCS.some(function(n){ return normTxt(
   if (ch) sdb();
 })();
 if (!db.comissMes) db.comissMes = {};
+if (!db.transferencias) db.transferencias = [];
 (function migOutrasPct(){ var pc=(db.comissoes||{}).pct||{}, ch=false;
   Object.keys(pc).forEach(function(k){ var r=pc[k]; if(r && r.outras!=null && r.outras!=='' ){ if(r.outrasProprio==null) r.outrasProprio=r.outras; if(r.outrasTerceiros==null) r.outrasTerceiros=r.outras; delete r.outras; ch=true; } });
   if(ch) localStorage.setItem(DBK, JSON.stringify(db)); })();
@@ -1116,6 +1156,15 @@ if (!db.metas) db.metas = {mensal:[], supermeta:{valor:0,de:'',ate:'',label:''}}
     });
   });
   if (ch) sdb();
+})();
+
+(function fixCardRecebidoTotal(){
+  var ch=false;
+  (db.clients||[]).forEach(function(c){ (c.receipts||[]).forEach(function(r){
+    var f=(db.aux.formasPag||[]).find(function(x){return x.name===r.forma;});
+    if (f && f.tipo && f.tipo!=='outro' && r.operadora && r.status==='RECEBIDO' && !(r.liq && Object.keys(r.liq).length)) { r.status='LANCADO'; r.def=''; ch=true; }
+  }); });
+  if (ch) localStorage.setItem(DBK, JSON.stringify(db)), localStorage.setItem('agp2_dirty','1');
 })();
 
 // ═══ MIGRAÇÃO: CATÁLOGO IGUI DE MODELOS ═══
@@ -1274,16 +1323,19 @@ function cliRecs(c) {
     var base = r.venc || c.dvenda || '';
     var sc = paySchedule(r.valor, base, r);
     sc.items.forEach(function(sItem) {
-      var st = r.status, def = r.def;
+      var st = r.status, def = r.def, val = sItem.v, tx = sItem.taxa, obs = r.obs, ajust = false;
       if (sc.pc.card) {
         var L = (r.liq||{})[sItem.k];
-        if (L) { st = L.status; def = L.def; }
+        if (L && L.status) { st = L.status; def = L.def; }
         else if (r.status==='RECEBIDO') { st = 'RECEBIDO'; def = r.def; }
         else { st = 'LANCADO'; def = ''; }
+        // Valor realmente recebido nesta parcela (a diferença entra como taxa financeira)
+        if (L && L.valor!=null && L.valor!=='') { val = r2(L.valor); tx = r2(sItem.taxa + (sItem.v - val)); ajust = true; }
+        if (L && L.obs) obs = L.obs;
       }
-      out.push({valor:sItem.v, venc:sItem.venc, status:st, def:def, forma:r.forma, obs:r.obs,
-        bruto:sItem.bruto, taxa:sItem.taxa, _card:sc.pc.card, _k:sItem.k, _n:sc.items.length,
-        _idx:idx, _label:sc.pc.label, _antec:sc.pc.antecipado});
+      out.push({valor:val, venc:sItem.venc, status:st, def:def, forma:r.forma, obs:obs,
+        bruto:sItem.bruto, taxa:tx, _card:sc.pc.card, _k:sItem.k, _n:sc.items.length,
+        _idx:idx, _label:sc.pc.label, _antec:sc.pc.antecipado, _prev:sItem.v, _ajust:ajust});
     });
   });
   return out;
@@ -2003,11 +2055,13 @@ function renderRecRows() {
       + '<input type="number" placeholder="Valor" value="'+(r.valor||'')+'" data-ri="'+i+'" data-field="valor" class="rr-val" min="0" step="0.01">'
       + '<input type="date" value="'+(r.venc||'')+'" data-ri="'+i+'" data-field="venc" class="rr-venc">'
       + '<select data-ri="'+i+'" data-field="forma" class="rr-forma"'+(r.forma?'':' style="border-color:var(--rd)"')+'>' + formaOptsHtml(r.forma||'') + '</select>'
-      + '<select data-ri="'+i+'" data-field="status" class="rr-st">'
-        + '<option value="PREVISTO"'+(r.status==='PREVISTO'?' selected':'')+'>Previsto</option>'
-        + '<option value="LANCADO"'+(r.status==='LANCADO'?' selected':'')+'>Lancado</option>'
-        + '<option value="RECEBIDO"'+(r.status==='RECEBIDO'?' selected':'')+'>Recebido</option>'
-      + '</select>'
+      + (fpTipo(formaInfo(r.forma))!=='outro'
+          ? '<span style="font-size:11px;color:var(--tx2);line-height:1.2" title="Cada parcela do cartão é baixada em Recebimentos">Status por parcela</span>'
+          : '<select data-ri="'+i+'" data-field="status" class="rr-st">'
+            + '<option value="PREVISTO"'+(r.status==='PREVISTO'?' selected':'')+'>Previsto</option>'
+            + '<option value="LANCADO"'+(r.status==='LANCADO'?' selected':'')+'>Lancado</option>'
+            + '<option value="RECEBIDO"'+(r.status==='RECEBIDO'?' selected':'')+'>Recebido</option>'
+          + '</select>')
       + '<button class="bic rr-del" data-ri="'+i+'">x</button>'
       + '</div>';
     var rf = formaInfo(r.forma), rt = fpTipo(rf);
@@ -2339,7 +2393,7 @@ function renderRec() {
   db.clients.forEach(function(c){cliRecs(c).forEach(function(r){
     if(fs&&r.status!==fs)return;
     if(!noFilter && !inRange(r.venc,from,to))return;
-    all.push({v:r.valor,bruto:r.bruto,taxa:r.taxa,venc:r.venc,forma:r.forma,label:r._label,card:r._card,k:r._k,n:r._n,antec:r._antec,status:r.status,obs:r.obs,def:r.def,cn:c.nome,cid:c.id,idx:r._idx});
+    all.push({v:r.valor,bruto:r.bruto,taxa:r.taxa,venc:r.venc,forma:r.forma,label:r._label,card:r._card,k:r._k,n:r._n,antec:r._antec,prev:r._prev,ajust:r._ajust,status:r.status,obs:r.obs,def:r.def,cn:c.nome,cid:c.id,idx:r._idx});
   });});
   // Incluir parcelas de manutenção
   manutAllParcelas().forEach(function(p){
@@ -2358,7 +2412,7 @@ function renderRec() {
   var todRec = today();
   var lim7 = new Date(); lim7.setDate(lim7.getDate()+7);
   var lim7Str = lim7.getFullYear()+'-'+String(lim7.getMonth()+1).padStart(2,'0')+'-'+String(lim7.getDate()).padStart(2,'0');
-  function valCell(r){ return '<span class="money pos">'+fmtM(r.v)+'</span>'+(r.taxa?'<div style="font-size:10px;color:var(--tx3);font-weight:400">bruto '+fmtM(r.bruto)+' · taxa '+fmtM(r.taxa)+'</div>':''); }
+  function valCell(r){ return '<span class="money pos">'+fmtM(r.v)+'</span>'+(r.ajust?'<div style="font-size:10px;color:var(--am);font-weight:500">ajustado · previsto '+fmtM(r.prev)+'</div>':'')+(r.taxa?'<div style="font-size:10px;color:var(--tx3);font-weight:400">bruto '+fmtM(r.bruto)+' · taxa '+fmtM(r.taxa)+'</div>':''); }
   function formaCell(r){ return (r.forma||'-')+(r.card?'<div style="font-size:10px;color:var(--tx3);font-weight:400">'+escA(r.label)+(r.antec?' · antecipado':(r.n>1?' · '+(r.k+1)+'/'+r.n:''))+'</div>':''); }
   tb.innerHTML=all.map(function(r){
     // Definir destaque de linha para itens não recebidos
@@ -2389,12 +2443,41 @@ function renderRec() {
       +'<td>'+fmtD(r.venc)+'</td><td>'+formaCell(r)+'</td><td>'+bdg(r.status)+'</td><td>'+fmtD(r.def)+'</td>'
       +'<td style="font-size:12px;color:var(--tx2)">'+(r.obs||'-')+'</td>'
       +'<td><div style="display:flex;gap:4px">'
-        +'<button class="btn bsm bs rec-edit-btn" data-cid="'+r.cid+'" data-idx="'+r.idx+'">Editar</button>'
+        +(r.card ? '<button class="btn bsm bs rec-parc-btn" data-cid="'+r.cid+'" data-idx="'+r.idx+'" data-k="'+r.k+'">Editar</button>'
+                 : '<button class="btn bsm bs rec-edit-btn" data-cid="'+r.cid+'" data-idx="'+r.idx+'">Editar</button>')
         +(r.status!=='RECEBIDO'?'<button class="btn bsm bok rec-ok-btn" data-cid="'+r.cid+'" data-idx="'+r.idx+'" data-k="'+(r.card?r.k:'')+'">OK</button>':'')
       +'</div></td></tr>';
   }).join('');
 }
+function openParcEdit(cid, idx, k) {
+  var c = db.clients.find(function(x){ return x.id===cid; }); if (!c) return;
+  var sub = cliRecs(c).find(function(x){ return x._idx===idx && String(x._k)===String(k); }); if (!sub) return;
+  G('mp-cid').value=cid; G('mp-idx').value=idx; G('mp-k').value=k;
+  G('mp-t').textContent = 'Parcela '+(sub._n>1?(sub._k+1)+'/'+sub._n:'única')+' — '+c.nome;
+  G('mp-info').innerHTML = escA(sub.forma||'')+' · '+escA(sub._label||'')+(sub._antec?' · antecipado':'')
+    + '<br>Vencimento: <b>'+fmtD(sub.venc)+'</b> · Previsto: <b>'+fmtM(sub._prev)+'</b>';
+  G('mp-val').value = sub.valor;
+  G('mp-st').value = sub.status==='RECEBIDO'?'RECEBIDO':(sub.status==='PREVISTO'?'PREVISTO':'LANCADO');
+  G('mp-def').value = sub.def || '';
+  G('mp-obs').value = ((c.receipts[idx].liq||{})[k]||{}).obs || '';
+  openModal('m-parc');
+}
+function saveParcEdit(restore) {
+  var cid=G('mp-cid').value, idx=parseInt(G('mp-idx').value), k=G('mp-k').value;
+  var c = db.clients.find(function(x){ return x.id===cid; }); if (!c || !c.receipts[idx]) return;
+  var r = c.receipts[idx]; if (!r.liq) r.liq = {};
+  if (r.status==='RECEBIDO') r.status = 'LANCADO';
+  if (restore) { delete r.liq[k]; sdb(); closeModal('m-parc'); renderRec(); showToast('Parcela voltou ao previsto'); return; }
+  var sub = cliRecs(c).find(function(x){ return x._idx===idx && String(x._k)===String(k); });
+  var v = parseFloat(G('mp-val').value), st = G('mp-st').value, def = G('mp-def').value;
+  if (isNaN(v) || v<0) { showToast('Informe o valor recebido'); return; }
+  if (st==='RECEBIDO' && !def) def = today();
+  r.liq[k] = {status:st, def:def, obs:G('mp-obs').value.trim(), valor: (sub && Math.abs(v - sub._prev) > 0.004) ? r2(v) : null};
+  sdb(); closeModal('m-parc'); renderRec(); showToast('Parcela atualizada!');
+}
 function openRecEdit(cid,idx) {
+  var isCard = (function(){ var c0=db.clients.find(function(x){return x.id===cid;}); var r0=c0&&c0.receipts[idx]; return r0 && fpTipo(formaInfo(r0.forma))!=='outro'; })();
+  if (isCard) { var c1=db.clients.find(function(x){return x.id===cid;}); var s1=cliRecs(c1).find(function(x){return x._idx===idx;}); if (s1) { openParcEdit(cid, idx, s1._k); return; } }
   var c=db.clients.find(function(x){return x.id===cid;}); if(!c)return;
   var r=c.receipts[idx]; if(!r)return;
   G('re-cid').value=cid; G('re-idx').value=idx;
@@ -3542,8 +3625,16 @@ function renderSaldo() {
     else recPrev += v;
   });
 
-  var saldoTotal = totalRec - totalDesp;
-  var saldoProjetado = (totalRec + recPrev) - (totalDesp + despPrev);
+  // Transferências entre o saldo operacional e os caixas (não são receita nem despesa)
+  var trOut = 0, trIn = 0;
+  (db.transferencias||[]).forEach(function(t){
+    if (!noFilter && !inRange(t.data, from, to)) return;
+    if (t.de==='saldo' && t.para!=='saldo') trOut += parseFloat(t.valor)||0;
+    if (t.para==='saldo' && t.de!=='saldo') trIn += parseFloat(t.valor)||0;
+  });
+  var trNet = trIn - trOut;
+  var saldoTotal = totalRec - totalDesp + trNet;
+  var saldoProjetado = (totalRec + recPrev) - (totalDesp + despPrev) + trNet;
   var totalCaixas = (db.caixas||[]).reduce(function(s,cx){return s+(parseFloat(cx.valor)||0);},0);
 
   G('saldo-total-area').innerHTML =
@@ -3551,11 +3642,13 @@ function renderSaldo() {
     +'<div class="kc cg"><div class="kl">Receitas Realizadas</div><div class="kv">'+fmtM(totalRec)+'</div><div class="ks">Recebimentos confirmados</div></div>'
     +'<div class="kc co"><div class="kl">Receitas Previstas</div><div class="kv">'+fmtM(recPrev)+'</div><div class="ks">A receber no período</div></div>'
     +'<div class="kc cr"><div class="kl">Despesas Realizadas</div><div class="kv">'+fmtM(totalDesp)+'</div><div class="ks">Pagamentos confirmados</div></div>'
-    +'<div class="kc '+(saldoTotal>=0?'cg':'cr')+'" style="border-width:2px"><div class="kl">Saldo Realizado</div><div class="kv">'+fmtM(saldoTotal)+'</div><div class="ks">Rec. - Desp. realizadas</div></div>'
+    +'<div class="kc '+(saldoTotal>=0?'cg':'cr')+'" style="border-width:2px"><div class="kl">Saldo Realizado</div><div class="kv">'+fmtM(saldoTotal)+'</div><div class="ks">Rec. − Desp. realizadas'+(trNet?' '+(trNet>0?'+':'−')+' '+fmtM(Math.abs(trNet))+' transf.':'')+'</div></div>'
     +'<div class="kc '+(saldoProjetado>=0?'cg':'cr')+'" style="border-width:2px;opacity:.75"><div class="kl">Saldo Projetado</div><div class="kv">'+fmtM(saldoProjetado)+'</div><div class="ks">Incluindo previsto</div></div>'
-    +'<div class="kc ca"><div class="kl">Total em Caixas</div><div class="kv">'+fmtM(totalCaixas)+'</div><div class="ks">Saldo cadastrado</div></div>'
+    +'<div class="kc ca"><div class="kl">Total em Caixas</div><div class="kv">'+fmtM(totalCaixas)+'</div><div class="ks">Saldo atual dos caixas</div></div>'
+    +((trIn||trOut)?'<div class="kc"><div class="kl">Transferências no período</div><div class="kv" style="font-size:16px">'+(trNet>=0?'+':'−')+' '+fmtM(Math.abs(trNet))+'</div><div class="ks">'+fmtM(trOut)+' para caixas · '+fmtM(trIn)+' para o saldo</div></div>':'')
     +'</div>';
 
+  renderTransf(from, to, noFilter, lbl);
   // Render caixas
   var cxEl = G('saldo-caixas-area');
   if(!(db.caixas||[]).length) {
@@ -3575,6 +3668,56 @@ function renderSaldo() {
         +'</div>';
     }).join('')
     +'</div>';
+}
+
+// ═══ TRANSFERÊNCIAS (saldo ⇄ caixas, caixa ⇄ caixa) ═══
+function contaNome(id){ if (id==='saldo') return 'Saldo operacional'; var cx=(db.caixas||[]).find(function(x){return x.id===id;}); return cx ? cx.nome : '(caixa excluído)'; }
+function contaOpts(sel){
+  return '<option value="saldo"'+(sel==='saldo'?' selected':'')+'>Saldo operacional</option>'
+    + (db.caixas||[]).map(function(cx){ return '<option value="'+cx.id+'"'+(sel===cx.id?' selected':'')+'>'+escA(cx.nome)+' ('+fmtM(cx.valor)+')</option>'; }).join('');
+}
+function openTransf(){
+  var first = (db.caixas||[])[0];
+  G('mt-de').innerHTML = contaOpts('saldo');
+  G('mt-para').innerHTML = contaOpts(first ? first.id : 'saldo');
+  G('mt-valor').value=''; G('mt-data').value=today(); G('mt-obs').value='';
+  updTransfInfo(); openModal('m-transf');
+}
+function updTransfInfo(){
+  var de=G('mt-de').value, para=G('mt-para').value, el=G('mt-info');
+  if (de===para) { el.innerHTML='<span style="color:var(--rd)">Escolha origem e destino diferentes.</span>'; return; }
+  el.textContent = de==='saldo' ? 'O valor sai do saldo operacional e entra no caixa "'+contaNome(para)+'".'
+    : para==='saldo' ? 'O valor sai do caixa "'+contaNome(de)+'" e volta para o saldo operacional.'
+    : 'O valor sai do caixa "'+contaNome(de)+'" e entra no caixa "'+contaNome(para)+'".';
+}
+function applyTransf(t, sign){ // sign 1 = aplicar, -1 = desfazer
+  var v=(parseFloat(t.valor)||0)*sign;
+  (db.caixas||[]).forEach(function(cx){
+    if (cx.id===t.de) cx.valor = r2((parseFloat(cx.valor)||0) - v);
+    if (cx.id===t.para) cx.valor = r2((parseFloat(cx.valor)||0) + v);
+  });
+}
+function saveTransf(){
+  var de=G('mt-de').value, para=G('mt-para').value, v=parseFloat(G('mt-valor').value)||0, d=G('mt-data').value;
+  if (de===para) { showToast('Origem e destino devem ser diferentes'); return; }
+  if (!v || v<=0) { showToast('Informe o valor'); return; }
+  if (!d) { showToast('Informe a data'); return; }
+  if (de!=='saldo') { var cx=(db.caixas||[]).find(function(x){return x.id===de;}); if (cx && v > (parseFloat(cx.valor)||0)+0.004) { showToast('Saldo insuficiente no caixa "'+cx.nome+'" ('+fmtM(cx.valor)+')'); return; } }
+  var t={id:uid(), de:de, para:para, valor:r2(v), data:d, obs:G('mt-obs').value.trim()};
+  if (!db.transferencias) db.transferencias=[];
+  db.transferencias.push(t); applyTransf(t, 1);
+  sdb(); closeModal('m-transf'); renderSaldo(); showToast('Transferência registrada!');
+}
+function renderTransf(from, to, noFilter, lbl){
+  var tb=G('transf-tb'); if (!tb) return;
+  G('transf-title').textContent = 'Transferências — '+lbl;
+  var list=(db.transferencias||[]).filter(function(t){ return noFilter || inRange(t.data, from, to); }).sort(function(a,b){ return a.data<b.data?1:-1; });
+  if (!list.length) { tb.innerHTML='<tr><td colspan="6" class="te">Nenhuma transferência no período</td></tr>'; return; }
+  tb.innerHTML=list.map(function(t){
+    return '<tr><td>'+fmtD(t.data)+'</td><td>'+escA(contaNome(t.de))+'</td><td>'+escA(contaNome(t.para))+'</td>'
+      +'<td style="text-align:right" class="money">'+fmtM(t.valor)+'</td><td style="color:var(--tx2);font-size:12px">'+escA(t.obs||'-')+'</td>'
+      +'<td><button class="btn bsm bd2 tr-del-btn" data-id="'+t.id+'">Desfazer</button></td></tr>';
+  }).join('');
 }
 
 var eCxId = null;
@@ -3970,6 +4113,7 @@ document.addEventListener('DOMContentLoaded', function() {
   G('rec-apply-btn').addEventListener('click', renderRec);
   G('rec-fs').addEventListener('change', renderRec);
   G('rec-tb').addEventListener('click', function(e){
+    var pb=e.target.closest('.rec-parc-btn');if(pb){openParcEdit(pb.getAttribute('data-cid'),parseInt(pb.getAttribute('data-idx')),pb.getAttribute('data-k'));return;}
     var eb=e.target.closest('.rec-edit-btn');if(eb){openRecEdit(eb.getAttribute('data-cid'),parseInt(eb.getAttribute('data-idx')));return;}
     var ok=e.target.closest('.rec-ok-btn');if(ok){
       if(ok.getAttribute('data-manut')==='1'){
@@ -3991,13 +4135,18 @@ document.addEventListener('DOMContentLoaded', function() {
       var rr=c.receipts[idx];
       if(kA!==''){
         var sub=cliRecs(c).find(function(x){return x._idx===idx&&String(x._k)===kA;});
-        confirm2('Confirmar recebimento',fmtM(sub?sub.valor:0)+(sub?' — '+fmtD(sub.venc):'')+'?',function(){ if(!rr.liq)rr.liq={}; rr.liq[kA]={status:'RECEBIDO',def:today()}; sdb();renderRec();showToast('Recebido!'); });
+        confirm2('Confirmar recebimento',fmtM(sub?sub.valor:0)+(sub?' — '+fmtD(sub.venc):'')+'?',function(){ if(!rr.liq)rr.liq={}; rr.liq[kA]=Object.assign({}, rr.liq[kA]||{}, {status:'RECEBIDO',def:today()}); sdb();renderRec();showToast('Recebido!'); });
       } else {
         confirm2('Confirmar',fmtM(payCalc(rr.valor,rr).liq)+'?',function(){rr.status='RECEBIDO';rr.def=today();sdb();renderRec();showToast('Recebido!');});
       }
     }
   });
   G('m-rec-close').addEventListener('click',function(){closeModal('m-rec');});
+  G('mp-close').addEventListener('click',function(){closeModal('m-parc');});
+  G('mp-cancel').addEventListener('click',function(){closeModal('m-parc');});
+  G('mp-save').addEventListener('click',function(){ saveParcEdit(false); });
+  G('mp-restore').addEventListener('click',function(){ saveParcEdit(true); });
+  G('mp-st').addEventListener('change',function(){ if(G('mp-st').value==='RECEBIDO' && !G('mp-def').value) G('mp-def').value=today(); });
   G('m-rec-cancel').addEventListener('click',function(){closeModal('m-rec');});
   G('m-rec-save').addEventListener('click',function(){
     if(!G('re-forma').value){showToast('Escolha a forma de pagamento');return;}
@@ -4165,6 +4314,19 @@ document.addEventListener('DOMContentLoaded', function() {
   // SALDO / CAIXAS
   G('saldo-apply-btn').addEventListener('click', renderSaldo);
   G('btn-novo-caixa').addEventListener('click', function(){openCxModal();});
+  G('btn-transf').addEventListener('click', openTransf);
+  G('mt-close').addEventListener('click', function(){closeModal('m-transf');});
+  G('mt-cancel').addEventListener('click', function(){closeModal('m-transf');});
+  G('mt-save').addEventListener('click', saveTransf);
+  G('mt-de').addEventListener('change', updTransfInfo);
+  G('mt-para').addEventListener('change', updTransfInfo);
+  G('transf-tb').addEventListener('click', function(e){
+    var b=e.target.closest('.tr-del-btn'); if(!b) return;
+    var t=(db.transferencias||[]).find(function(x){return x.id===b.getAttribute('data-id');}); if(!t) return;
+    confirm2('Desfazer transferência', fmtM(t.valor)+' de '+contaNome(t.de)+' para '+contaNome(t.para)+'?', function(){
+      applyTransf(t, -1); db.transferencias=db.transferencias.filter(function(x){return x!==t;}); sdb(); renderSaldo(); showToast('Transferência desfeita');
+    });
+  });
   G('m-caixa-close').addEventListener('click', function(){closeModal('m-caixa');});
   G('m-caixa-cancel').addEventListener('click', function(){closeModal('m-caixa');});
   G('m-caixa-save').addEventListener('click', saveCaixa);
