@@ -1120,6 +1120,15 @@ function isProdFunc(f){ return f && PROD_FUNCS.some(function(n){ return normTxt(
 if (!db.comissMes) db.comissMes = {};
 if (!db.transferencias) db.transferencias = [];
 if (!db.aux.itensDespesa) db.aux.itensDespesa = [];
+(function seedCatModelo(){
+  if (!db.seeds) db.seeds = {};
+  if (db.seeds.catModelo) return;
+  if (!db.aux.catDespesas) db.aux.catDespesas = [];
+  var ex = db.aux.catDespesas.find(function(c){ return String(c.name).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim()==='modelo'; });
+  if (!ex) db.aux.catDespesas.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), name:'Modelo', active:true});
+  db.seeds.catModelo = true;
+  localStorage.setItem(DBK, JSON.stringify(db)); localStorage.setItem('agp2_dirty','1');
+})();
 // ═══ CARGA ÚNICA: TABELA DE CUSTOS iGUi (21/10/2026) ═══
 (function seedCustosIgui(){
   if (!db.seeds) db.seeds = {};
@@ -2138,16 +2147,19 @@ function expItemOpts(catId) {
     .sort(function(a,b){ return String(a.desc).localeCompare(String(b.desc),'pt-BR',{numeric:true}) || String(a.cor||'').localeCompare(String(b.cor||''),'pt-BR'); })
     .map(function(x){ return {id:x.id, desc:x.desc+(x.cor?' · '+x.cor:'')+(x.unidade?' ('+x.unidade+')':''), base:x.desc+(x.cor?' '+x.cor:''), unidade:x.unidade||'', preco:x.preco, precoPromo:x.precoPromo}; });
   var cat = gAux('catDespesas').find(function(c){ return c.id===catId; });
-  if (cat && /fabrica|casco/.test(normTxt(cat.name))) {
+  if (cat && normTxt(cat.name)==='modelo') {
     var mid = (G('c-modelo')||{}).value;
     sortAlpha(gAux('modelos').filter(function(m){ return m.active; })).sort(function(a,b){ return (b.id===mid) - (a.id===mid); }).forEach(function(m){
-      if ((m.preco===''||m.preco==null) && (m.precoPromo===''||m.precoPromo==null) && m.id!==mid) return;
       out.push({id:'mod:'+m.id, desc:'Modelo '+m.name+(m.id===mid?' (modelo do cliente)':''), base:'Modelo '+m.name, unidade:'un', preco:m.preco, precoPromo:m.precoPromo});
     });
   }
   return out;
 }
 function hasV(v){ return !(v===''||v==null); }
+function isRtCat(catId){ var c=gAux('catDespesas').find(function(x){return x.id===catId;}); return !!c && /^rt\b/.test(normTxt(c.name)) && /arquitet/.test(normTxt(c.name)); }
+function recBaseTotal(){ return r2(recRows.reduce(function(a,r){ return a+(parseFloat(r.valor)||0); },0)); }
+function arqPctPadrao(){ var a=gAux('arquitetos').find(function(x){ return x.id===(G('c-arq')||{}).value; }); return a && parseFloat(a.commission) ? parseFloat(a.commission) : ''; }
+function rtDesc(r){ var a=gAux('arquitetos').find(function(x){ return x.id===(G('c-arq')||{}).value; }); return 'RT Arquiteto'+(hasV(r.rtPct)?' '+String(r.rtPct).replace('.',',')+'%':'')+(a?' — '+a.name:''); }
 function renderExpRows() {
   var el = G('c-exp-rows');
   var cats = sortAlpha(gAux('catDespesas').filter(function(a){return a.active;}));
@@ -2157,10 +2169,11 @@ function renderExpRows() {
     if (e.qtd==null || e.qtd==='') { e.qtd = 1; e.unit = parseFloat(e.valor)||0; }
     var catOpts = cats.map(function(c){return '<option value="'+c.id+'"'+(e.catId===c.id?' selected':'')+'>'+escA(c.name)+'</option>';}).join('');
     var opts = e.catId ? expItemOpts(e.catId) : [];
-    var outro = e.itemId==='__outro' || (!e.itemId && e.desc);
-    var itemSel = '<select data-ei="'+i+'" data-field="itemId" class="er-item"><option value="">Item…</option>'
+    var rt = isRtCat(e.catId);
+    var outro = !rt && (e.itemId==='__outro' || (!e.itemId && e.desc));
+    var itemSel = rt ? '<div style="font-size:12px;color:var(--tx2)">'+escA(rtDesc(e))+'</div>' : '<select data-ei="'+i+'" data-field="itemId" class="er-item"><option value="">Item…</option>'
       + opts.map(function(o){ return '<option value="'+o.id+'"'+(e.itemId===o.id?' selected':'')+'>'+escA(o.desc)+'</option>'; }).join('')
-      + '<option value="__outro"'+(outro?' selected':'')+'>Outra (digitar)</option></select>';
+      + (rt ? '' : '<option value="__outro"'+(outro?' selected':'')+'>Outra (digitar)</option></select>');
     var cur = opts.find(function(o){ return o.id===e.itemId; });
     var priceSel = '';
     if (cur && hasV(cur.preco) && hasV(cur.precoPromo)) {
@@ -2180,8 +2193,13 @@ function renderExpRows() {
       + '<button class="bic er-del" data-ei="'+i+'">x</button>'
       + '</div><div class="ersub">'
       + (outro ? '<input type="text" placeholder="Item" value="'+escA(e.desc||'')+'" data-ei="'+i+'" data-field="desc" style="flex:1;min-width:140px">' : '')
-      + '<label>Qtd'+(e.unidade?' ('+escA(e.unidade)+')':'')+'</label><input type="number" min="0" step="any" value="'+e.qtd+'" data-ei="'+i+'" data-field="qtd" style="width:64px">'
-      + '<label>× Valor unit.</label><input type="number" min="0" step="0.01" value="'+(hasV(e.unit)?e.unit:'')+'" data-ei="'+i+'" data-field="unit" style="width:100px" placeholder="0,00">'
+      + (rt
+        ? '<label>% RT</label><input type="number" min="0" step="0.01" value="'+(hasV(e.rtPct)?e.rtPct:'')+'" data-ei="'+i+'" data-field="rtPct" style="width:70px" placeholder="%">'
+          + '<span>× '+fmtM(recBaseTotal())+' <span style="color:var(--tx3)">(total de recebimento)</span></span>'
+          + '<label>= Valor</label><input type="number" min="0" step="0.01" id="er-unit-'+i+'" value="'+(hasV(e.unit)?e.unit:'')+'" data-ei="'+i+'" data-field="unit" style="width:110px" placeholder="0,00">'
+          + (hasV(e.rtPct) && Math.abs((parseFloat(e.unit)||0) - r2(recBaseTotal()*e.rtPct/100))>0.004 ? '<button type="button" class="btn bsm bs er-rt-recalc" data-ei="'+i+'" title="Recalcular com o total de recebimento atual">↻ Recalcular</button>' : '')
+        : '<label>Qtd'+(e.unidade?' ('+escA(e.unidade)+')':'')+'</label><input type="number" min="0" step="any" value="'+e.qtd+'" data-ei="'+i+'" data-field="qtd" style="width:64px">'
+          + '<label>× Valor unit.</label><input type="number" min="0" step="0.01" value="'+(hasV(e.unit)?e.unit:'')+'" data-ei="'+i+'" data-field="unit" style="width:100px" placeholder="0,00">')
       + priceSel
       + '<span class="er-total">= <b id="er-tot-'+i+'">'+fmtM(r2((parseFloat(e.qtd)||0)*(parseFloat(e.unit)||0)))+'</b></span>'
       + '</div></div>';
@@ -4247,9 +4265,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // EXP ROWS delegation
   G('c-exp-rows').addEventListener('input', function(e){var t=e.target;var i=parseInt(t.getAttribute('data-ei'));if(isNaN(i))return;var f=t.getAttribute('data-field');if(!f)return;
+    if(f==='rtPct'){ var r0=expRows[i]; r0.rtPct=t.value===''?'':(parseFloat(t.value)||0); r0.qtd=1; r0.unit=hasV(r0.rtPct)?r2(recBaseTotal()*r0.rtPct/100):''; r0.desc=rtDesc(r0); var ui=G('er-unit-'+i); if(ui) ui.value=r0.unit; updExpTot(); return; }
     if(f==='qtd'||f==='unit'){expRows[i][f]=t.value===''?'':(parseFloat(t.value)||0);updExpTot();} else if(f==='desc'||f==='data') expRows[i][f]=t.value;});
   G('c-exp-rows').addEventListener('change', function(e){var t=e.target;var i=parseInt(t.getAttribute('data-ei'));if(isNaN(i))return;var f=t.getAttribute('data-field');if(!f)return;var r=expRows[i];
-    if(f==='catId'){ r.catId=t.value; r.itemId=''; r.precoTipo='normal'; if(!r.desc||r.itemId!=='__outro') r.desc=''; renderExpRows(); return; }
+    if(f==='catId'){ r.catId=t.value; r.itemId=''; r.precoTipo='normal'; r.desc=''; r.unidade=''; r.unit=''; r.rtPct='';
+      if(isRtCat(r.catId)){ r.qtd=1; r.rtPct=arqPctPadrao(); r.unit=hasV(r.rtPct)?r2(recBaseTotal()*r.rtPct/100):''; r.desc=rtDesc(r); }
+      renderExpRows(); return; }
     if(f==='itemId'){
       r.itemId=t.value; r.precoTipo='normal';
       var o=expItemOpts(r.catId).find(function(x){return x.id===t.value;});
@@ -4260,9 +4281,11 @@ document.addEventListener('DOMContentLoaded', function() {
       renderExpRows(); return;
     }
     if(f==='precoTipo'){ r.precoTipo=t.value; var o2=expItemOpts(r.catId).find(function(x){return x.id===r.itemId;}); if(o2) r.unit = t.value==='promo'?o2.precoPromo:o2.preco; renderExpRows(); return; }
-    if(f==='qtd'||f==='unit'){ r[f]=t.value===''?'':(parseFloat(t.value)||0); updExpTot(); return; }
+    if(f==='rtPct'){ renderExpRows(); return; }
+    if(f==='qtd'||f==='unit'){ r[f]=t.value===''?'':(parseFloat(t.value)||0); updExpTot(); if(f==='unit'&&isRtCat(r.catId)) renderExpRows(); return; }
     r[f]=t.value; updExpTot();});
-  G('c-exp-rows').addEventListener('click', function(e){var btn=e.target.closest('.er-del');if(btn){var i=parseInt(btn.getAttribute('data-ei'));expRows.splice(i,1);renderExpRows();}});
+  G('c-exp-rows').addEventListener('click', function(e){var rc=e.target.closest('.er-rt-recalc'); if(rc){var r1=expRows[parseInt(rc.getAttribute('data-ei'))]; r1.unit=r2(recBaseTotal()*r1.rtPct/100); renderExpRows(); return;}
+    var btn=e.target.closest('.er-del');if(btn){var i=parseInt(btn.getAttribute('data-ei'));expRows.splice(i,1);renderExpRows();}});
 
   // MODAL OVERLAY CLOSE
   G('m-cli').addEventListener('click',function(e){if(e.target===G('m-cli'))closeModal('m-cli');});
