@@ -261,7 +261,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 21/10/2026 · 19:45</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 21/10/2026 · 20:00</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -501,6 +501,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       </div>
     </div>
     <div class="sb2">
+      <input type="search" class="fl" id="rec-q" placeholder="Buscar cliente, forma, valor, data, obs…" style="flex:1;min-width:200px">
       <select class="fl" id="rec-fs"><option value="">Todos os status</option><option value="PREVISTO">Previsto</option><option value="LANCADO">Lancado</option><option value="RECEBIDO">Recebido</option></select>
     </div>
     <div class="card"><div class="tw"><table>
@@ -2584,6 +2585,13 @@ function renderRec() {
     all.push({v:p.v,bruto:p.bruto,taxa:p.taxa,venc:filterDate,forma:p.forma,status:p.status,obs:p.obs||'',def:p.def,cn:'🔧 '+p.cn,_manut:true,mnId:p.mnId,mnVenc:p.venc});
   });
   all.sort(function(a,b){return a.venc>b.venc?1:-1;});
+  // Busca livre (todas as palavras precisam aparecer)
+  var rq=normTxt((G('rec-q')||{value:''}).value).split(' ').filter(Boolean);
+  if (rq.length) all = all.filter(function(r){
+    var st={PREVISTO:'previsto',LANCADO:'lancado',RECEBIDO:'recebido'}[r.status]||'';
+    var txt=normTxt([r.cn, r.forma, r.label, r.obs, st, fmtM(r.v), String(r.v), fmtD(r.venc), fmtD(r.def), r.card&&r.n>1?(r.k+1)+'/'+r.n:'', r._manut?'manutencao':''].join(' '));
+    return rq.every(function(t){ return txt.indexOf(t)>=0; });
+  });
   var pv=0,ln=0,rb=0;
   all.forEach(function(r){if(r.status==='PREVISTO')pv+=r.v; else if(r.status==='LANCADO')ln+=r.v; else if(r.status==='RECEBIDO')rb+=r.v;});
   G('rec-kpis').innerHTML='<div class="kc ca"><div class="kl">Previsto</div><div class="kv">'+fmtM(pv)+'</div></div><div class="kc co"><div class="kl">Lancado</div><div class="kv">'+fmtM(ln)+'</div></div><div class="kc cg"><div class="kl">Recebido</div><div class="kv">'+fmtM(rb)+'</div></div><div class="kc"><div class="kl">Total</div><div class="kv">'+fmtM(pv+ln+rb)+'</div></div>';
@@ -4432,6 +4440,7 @@ document.addEventListener('DOMContentLoaded', function() {
   G('rec-t').addEventListener('change', renderRec);
   G('rec-apply-btn').addEventListener('click', renderRec);
   G('rec-fs').addEventListener('change', renderRec);
+  G('rec-q').addEventListener('input', renderRec);
   G('rec-tb').addEventListener('click', function(e){
     var pb=e.target.closest('.rec-parc-btn');if(pb){openParcEdit(pb.getAttribute('data-cid'),parseInt(pb.getAttribute('data-idx')),pb.getAttribute('data-k'));return;}
     var eb=e.target.closest('.rec-edit-btn');if(eb){openRecEdit(eb.getAttribute('data-cid'),parseInt(eb.getAttribute('data-idx')));return;}
