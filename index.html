@@ -875,7 +875,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div class="alert ai">A data define o periodo no Fluxo de Caixa e DRE.</div>
       <div style="display:grid;grid-template-columns:1fr 1.3fr 125px 95px 26px;gap:6px;padding:3px 0 6px;border-bottom:2px solid var(--bd)">
         <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Categoria</span>
-        <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Descrição</span>
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Item</span>
         <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Data</span>
         <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Status</span>
         <span></span>
@@ -1120,6 +1120,36 @@ function isProdFunc(f){ return f && PROD_FUNCS.some(function(n){ return normTxt(
 if (!db.comissMes) db.comissMes = {};
 if (!db.transferencias) db.transferencias = [];
 if (!db.aux.itensDespesa) db.aux.itensDespesa = [];
+// ═══ CARGA ÚNICA: TABELA DE CUSTOS iGUi (21/10/2026) ═══
+(function seedCustosIgui(){
+  if (!db.seeds) db.seeds = {};
+  if (db.seeds.custosIgui20261021) return;
+  var T = {"mods": [{"n": "Kéramos", "p": 14161.1, "q": 11328.88}, {"n": "Kéramos Acrilico", "p": 14161.1, "q": 11328.88}, {"n": "Kéramos Acrilico L", "p": 14161.1, "q": 11328.88}, {"n": "Kéramos Acrilico U", "p": 14161.1, "q": 11328.88}, {"n": "CETUS", "p": 14161.1, "q": 11328.88}, {"n": "Faenza", "p": 17235.6, "q": 13788.48}, {"n": "Faenza Acrilico", "p": 17235.6, "q": 13788.48}, {"n": "Faenza Acrilico L", "p": 17235.6, "q": 13788.48}, {"n": "Faenza Acrilico U", "p": 17235.6, "q": 13788.48}, {"n": "Ática", "p": 23349.4, "q": 18679.52}, {"n": "Arita", "p": 28478.7, "q": 22782.96}, {"n": "Arita Acrilico", "p": 28478.7, "q": 22782.96}, {"n": "Arita Acrilico L", "p": 28478.7, "q": 22782.96}, {"n": "Arita Acrilico U", "p": 28478.7, "q": 22782.96}, {"n": "Murano", "p": 21701.6, "q": 17361.28}, {"n": "Aquarium", "p": 21701.6, "q": 17361.28}, {"n": "Jomon", "p": 36376.7, "q": 29101.36}, {"n": "Marajoara", "p": 44249.4, "q": 35399.52}, {"n": "Aruã", "p": 48775.9, "q": 39020.72}, {"n": "Vallauris", "p": 64655.5, "q": 51724.4}, {"n": "Montelupo", "p": 71679.0, "q": 57343.2}, {"n": "Mino", "p": 86255.1, "q": 69004.08}, {"n": "Fès Blue", "p": 74509.3, "q": 59607.44}, {"n": "Castelli", "p": 93476.6, "q": 74781.28}, {"n": "Rodes", "p": 126418.3, "q": ""}, {"n": "Arabá", "p": 19523.6, "q": ""}, {"n": "001", "p": 10200.0, "q": ""}, {"n": "002", "p": 11160.3, "q": ""}, {"n": "003", "p": 36647.3, "q": ""}, {"n": "004", "p": 15464.6, "q": 12371.68}, {"n": "005", "p": 33756.5, "q": ""}, {"n": "006", "p": 20016.4, "q": ""}, {"n": "007", "p": 16818.7, "q": 13454.96}, {"n": "008", "p": 17716.3, "q": ""}, {"n": "009", "p": 20533.4, "q": ""}, {"n": "010", "p": 21590.5, "q": ""}, {"n": "011", "p": 26844.1, "q": ""}, {"n": "012", "p": 24936.7, "q": ""}, {"n": "014", "p": 27765.9, "q": ""}, {"n": "015", "p": 29242.1, "q": ""}, {"n": "016", "p": 11689.4, "q": ""}, {"n": "017", "p": 32033.9, "q": ""}, {"n": "018", "p": 20691.8, "q": ""}, {"n": "019", "p": 35491.2, "q": ""}, {"n": "020", "p": 35491.2, "q": ""}, {"n": "021", "p": 17212.5, "q": 13770.0}, {"n": "022", "p": 20876.6, "q": ""}, {"n": "023", "p": 144428.6, "q": ""}, {"n": "024", "p": 14752.0, "q": 11801.6}, {"n": "025", "p": 29452.2, "q": ""}, {"n": "026", "p": 15784.7, "q": ""}, {"n": "027", "p": 14382.2, "q": ""}, {"n": "028", "p": 26781.4, "q": 21425.12}, {"n": "029", "p": 29365.3, "q": 23492.24}, {"n": "030", "p": 32071.3, "q": 25657.04}, {"n": "031", "p": 34901.6, "q": 27921.28}, {"n": "032", "p": 37852.9, "q": 30282.32}, {"n": "033", "p": 40927.4, "q": 32741.92}, {"n": "034", "p": 44076.7, "q": 35261.36}, {"n": "035", "p": 47311.8, "q": 37849.44}, {"n": "036", "p": 50252.1, "q": 40201.68}, {"n": "037", "p": 51384.0, "q": 41107.2}, {"n": "038", "p": 56426.4, "q": 45141.12}, {"n": "039", "p": 62209.1, "q": 49767.28}, {"n": "040", "p": 67621.1, "q": 54096.88}, {"n": "041", "p": 73156.3, "q": 58525.04}, {"n": "042", "p": 79551.7, "q": 63641.36}, {"n": "043", "p": 85456.5, "q": 68365.2}, {"n": "044", "p": 89761.9, "q": 71809.52}, {"n": "045", "p": 94190.5, "q": 75352.4}, {"n": "046", "p": 23804.8, "q": ""}, {"n": "047", "p": 23804.8, "q": ""}, {"n": "048", "p": 26928.8, "q": ""}, {"n": "049", "p": 34174.5, "q": ""}, {"n": "050", "p": 39119.0, "q": ""}, {"n": "051", "p": 19795.3, "q": ""}, {"n": "052", "p": 26142.3, "q": ""}, {"n": "053", "p": 26635.1, "q": ""}, {"n": "054", "p": 8454.3, "q": ""}, {"n": "055", "p": 22193.3, "q": ""}, {"n": "056", "p": 22193.3, "q": ""}, {"n": "057", "p": 14813.4, "q": ""}, {"n": "058", "p": 14813.4, "q": ""}, {"n": "059", "p": 16116.9, "q": ""}, {"n": "060", "p": 22426.5, "q": ""}, {"n": "061", "p": 17950.6, "q": ""}, {"n": "062", "p": 18725.0, "q": ""}, {"n": "063", "p": 15453.6, "q": ""}, {"n": "064", "p": 21492.6, "q": ""}, {"n": "065", "p": 15587.8, "q": ""}, {"n": "066", "p": 21394.7, "q": ""}, {"n": "067", "p": 15280.9, "q": ""}, {"n": "068", "p": 18270.7, "q": ""}, {"n": "069", "p": 40030.9, "q": 32024.72}, {"n": "070", "p": 58149.0, "q": 46519.2}, {"n": "071", "p": 20877.7, "q": ""}, {"n": "073", "p": 17999.0, "q": ""}, {"n": "074", "p": 20016.4, "q": ""}, {"n": "075", "p": 10398.0, "q": ""}, {"n": "076", "p": 11319.8, "q": 9055.84}, {"n": "077", "p": 8085.8, "q": ""}, {"n": "078", "p": 44003.0, "q": ""}, {"n": "079", "p": 36007.1, "q": ""}, {"n": "080", "p": 46032.5, "q": ""}, {"n": "081", "p": 10816.0, "q": ""}, {"n": "082 (Antg. Keramos)", "p": 13005.0, "q": 10404.0}, {"n": "083 (Antg. Faenza)", "p": 17089.3, "q": 13671.44}, {"n": "084", "p": 13398.8, "q": ""}, {"n": "085", "p": 13042.4, "q": ""}, {"n": "086", "p": 43019.6, "q": ""}, {"n": "087", "p": 30964.7, "q": ""}, {"n": "088", "p": 30964.7, "q": ""}, {"n": "089", "p": 27507.4, "q": ""}, {"n": "090", "p": 27507.4, "q": ""}, {"n": "091", "p": 29205.8, "q": ""}, {"n": "092", "p": 20668.7, "q": ""}, {"n": "093 (Arita banco Inv.)", "p": 28479.8, "q": ""}, {"n": "094", "p": 11135.0, "q": ""}, {"n": "095", "p": 29562.2, "q": 23649.76}, {"n": "096", "p": 46672.7, "q": ""}, {"n": "097", "p": 67251.5, "q": ""}, {"n": "098", "p": 17088.2, "q": ""}, {"n": "099", "p": 15956.3, "q": ""}, {"n": "100", "p": 12390.1, "q": ""}, {"n": "101", "p": 16412.8, "q": ""}, {"n": "102", "p": 29242.1, "q": ""}, {"n": "103", "p": 27459.0, "q": ""}, {"n": "104", "p": 36598.9, "q": ""}, {"n": "105", "p": 34506.7, "q": ""}, {"n": "106", "p": 18320.0, "q": ""}, {"n": "107", "p": 61736.0, "q": ""}, {"n": "108", "p": 61736.0, "q": ""}, {"n": "109", "p": 34114.0, "q": ""}, {"n": "110", "p": 49158.0, "q": ""}, {"n": "111", "p": 16818.0, "q": ""}, {"n": "112", "p": 34114.0, "q": ""}, {"n": "114", "p": 16917.0, "q": ""}, {"n": "115", "p": 16917.0, "q": ""}, {"n": "116", "p": 12074.0, "q": ""}, {"n": "117", "p": 10892.0, "q": ""}, {"n": "118", "p": 78332.0, "q": ""}], "stone": [{"desc": "Borda 15x50", "cor": "Black", "un": "m", "preco": 100.0}, {"desc": "Borda 20x50", "cor": "Black", "un": "m", "preco": 130.0}, {"desc": "Borda 25x50", "cor": "Black", "un": "m", "preco": 160.0}, {"desc": "Borda 30x50", "cor": "Black", "un": "m", "preco": 195.0}, {"desc": "Piso 50x50", "cor": "Black", "un": "m²", "preco": 570.0}, {"desc": "Borda 15x50", "cor": "Travertino", "un": "m", "preco": 85.0}, {"desc": "Borda 20x50", "cor": "Travertino", "un": "m", "preco": 110.0}, {"desc": "Borda 25x50", "cor": "Travertino", "un": "m", "preco": 135.0}, {"desc": "Borda 30x50", "cor": "Travertino", "un": "m", "preco": 165.0}, {"desc": "Piso 50x50", "cor": "Travertino", "un": "m²", "preco": 510.0}, {"desc": "Borda 15x50", "cor": "Cintilante", "un": "m", "preco": 75.0}, {"desc": "Borda 20x50", "cor": "Cintilante", "un": "m", "preco": 100.0}, {"desc": "Borda 25x50", "cor": "Cintilante", "un": "m", "preco": 120.0}, {"desc": "Borda 30x50", "cor": "Cintilante", "un": "m", "preco": 145.0}, {"desc": "Piso 50x50", "cor": "Cintilante", "un": "m²", "preco": 440.0}], "aq": [{"desc": "Inverter Wi-Fi Mini - 14.300 BTUs", "un": "un", "preco": 3500.0}, {"desc": "Inverter Wi-Fi P - 20.000 BTUs", "un": "un", "preco": 5950.0}, {"desc": "Inverter Wi-Fi M - 27.300 BTUs", "un": "un", "preco": 6850.0}, {"desc": "Inverter Wi-Fi G - 42.660 BTUs", "un": "un", "preco": 9400.0}, {"desc": "Inverter Wi-Fi GG - 55.600 BTUs", "un": "un", "preco": 10050.0}, {"desc": "Inverter Wi-Fi 2XG - 89.400 Btus", "un": "un", "preco": 17000.0}, {"desc": "Inverter Wi-Fi 3XG - 116.010 BTUs", "un": "un", "preco": 21000.0}], "outros": [{"desc": "Efeito Perlage no Acrílico", "un": "un", "preco": 1500.0}, {"desc": "Motobomba Adicional para Automação", "un": "un", "preco": ""}, {"desc": "Capa Térmica", "un": "m²", "preco": ""}, {"desc": "Upgrade Filtro Eletronic System", "un": "", "preco": ""}, {"desc": "Downgrade Filtro G7 Conceito", "un": "", "preco": ""}, {"desc": "Placa de Titânio Personalizada", "un": "un", "preco": ""}, {"desc": "Jet Color", "un": "un", "preco": ""}, {"desc": "Cascata Inox", "un": "un", "preco": ""}, {"desc": "Cascata Contemporânea", "un": "un", "preco": ""}, {"desc": "Conjunto de Móveis Gris", "un": "un", "preco": 1490.0}, {"desc": "Aspirador Robo Sem Fio iGUi Triton", "un": "un", "preco": 2900.0}, {"desc": "Conjunto de Móveis Arena", "un": "un", "preco": 1390.0}, {"desc": "Espreguiçadeira Arena", "un": "un", "preco": 490.0}, {"desc": "Espreguiçadeira Gris", "un": "un", "preco": 490.0}]};
+  var nz = function(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\*/g,'').replace(/\s+/g,' ').trim(); };
+  var uidL = function(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); };
+  // Modelos: preço = casco + titânio; promoção = casco promo + titânio promo
+  if (!db.aux.modelos) db.aux.modelos = [];
+  T.mods.forEach(function(m){
+    var k = nz(m.n), num = /^\d{3}/.test(m.n) ? m.n.slice(0,3) : null;
+    var md = db.aux.modelos.find(function(x){ return nz(x.name)===k; })
+          || (num ? db.aux.modelos.find(function(x){ return String(x.name).slice(0,3)===num && !/^\d{4}/.test(x.name); }) : null);
+    if (!md) { md = {id:uidL(), name:m.n, desc:'', active:true}; db.aux.modelos.push(md); }
+    md.preco = m.p; md.precoPromo = m.q;
+  });
+  // Categorias e itens de despesa
+  if (!db.aux.catDespesas) db.aux.catDespesas = [];
+  function cat(name){ var c = db.aux.catDespesas.find(function(x){ return nz(x.name)===nz(name); }); if (!c) { c={id:uidL(), name:name, active:true}; db.aux.catDespesas.push(c); } return c; }
+  function upsert(c, it){
+    var ex = db.aux.itensDespesa.find(function(x){ return x.catId===c.id && nz(x.desc)===nz(it.desc) && nz(x.cor)===nz(it.cor); });
+    if (ex) { ex.preco = it.preco; ex.unidade = it.unidade; if (it.cor!=null) ex.cor = it.cor; }
+    else db.aux.itensDespesa.push({id:uidL(), catId:c.id, desc:it.desc, cor:it.cor||'', unidade:it.unidade||'', preco:it.preco, precoPromo:'', active:true});
+  }
+  var cs = cat('Igui Stone');   T.stone.forEach(function(x){ upsert(cs, {desc:x.desc, cor:x.cor, unidade:x.un, preco:x.preco}); });
+  var ct = cat('Trocador de Calor'); T.aq.forEach(function(x){ upsert(ct, {desc:x.desc, cor:'', unidade:'un', preco:x.preco}); });
+  var co = cat('Outros');       T.outros.forEach(function(x){ upsert(co, {desc:x.desc, cor:'', unidade:x.un, preco:x.preco}); });
+  db.seeds.custosIgui20261021 = true;
+  localStorage.setItem(DBK, JSON.stringify(db)); localStorage.setItem('agp2_dirty','1');
+})();
 (function migOutrasPct(){ var pc=(db.comissoes||{}).pct||{}, ch=false;
   Object.keys(pc).forEach(function(k){ var r=pc[k]; if(r && r.outras!=null && r.outras!=='' ){ if(r.outrasProprio==null) r.outrasProprio=r.outras; if(r.outrasTerceiros==null) r.outrasTerceiros=r.outras; delete r.outras; ch=true; } });
   if(ch) localStorage.setItem(DBK, JSON.stringify(db)); })();
@@ -2105,14 +2135,14 @@ function updRecTot() {
 // Opções de descrição por categoria (itens cadastrados; na categoria Fábrica também os modelos de piscina)
 function expItemOpts(catId) {
   var out = (db.aux.itensDespesa||[]).filter(function(x){ return x.catId===catId && x.active; })
-    .sort(function(a,b){ return String(a.desc).localeCompare(String(b.desc),'pt-BR',{numeric:true}); })
-    .map(function(x){ return {id:x.id, desc:x.desc, preco:x.preco, precoPromo:x.precoPromo}; });
+    .sort(function(a,b){ return String(a.desc).localeCompare(String(b.desc),'pt-BR',{numeric:true}) || String(a.cor||'').localeCompare(String(b.cor||''),'pt-BR'); })
+    .map(function(x){ return {id:x.id, desc:x.desc+(x.cor?' · '+x.cor:'')+(x.unidade?' ('+x.unidade+')':''), base:x.desc+(x.cor?' '+x.cor:''), unidade:x.unidade||'', preco:x.preco, precoPromo:x.precoPromo}; });
   var cat = gAux('catDespesas').find(function(c){ return c.id===catId; });
   if (cat && /fabrica|casco/.test(normTxt(cat.name))) {
     var mid = (G('c-modelo')||{}).value;
     sortAlpha(gAux('modelos').filter(function(m){ return m.active; })).sort(function(a,b){ return (b.id===mid) - (a.id===mid); }).forEach(function(m){
       if ((m.preco===''||m.preco==null) && (m.precoPromo===''||m.precoPromo==null) && m.id!==mid) return;
-      out.push({id:'mod:'+m.id, desc:'Modelo '+m.name+(m.id===mid?' (modelo do cliente)':''), preco:m.preco, precoPromo:m.precoPromo});
+      out.push({id:'mod:'+m.id, desc:'Modelo '+m.name+(m.id===mid?' (modelo do cliente)':''), base:'Modelo '+m.name, unidade:'un', preco:m.preco, precoPromo:m.precoPromo});
     });
   }
   return out;
@@ -2128,7 +2158,7 @@ function renderExpRows() {
     var catOpts = cats.map(function(c){return '<option value="'+c.id+'"'+(e.catId===c.id?' selected':'')+'>'+escA(c.name)+'</option>';}).join('');
     var opts = e.catId ? expItemOpts(e.catId) : [];
     var outro = e.itemId==='__outro' || (!e.itemId && e.desc);
-    var itemSel = '<select data-ei="'+i+'" data-field="itemId" class="er-item"><option value="">Descrição…</option>'
+    var itemSel = '<select data-ei="'+i+'" data-field="itemId" class="er-item"><option value="">Item…</option>'
       + opts.map(function(o){ return '<option value="'+o.id+'"'+(e.itemId===o.id?' selected':'')+'>'+escA(o.desc)+'</option>'; }).join('')
       + '<option value="__outro"'+(outro?' selected':'')+'>Outra (digitar)</option></select>';
     var cur = opts.find(function(o){ return o.id===e.itemId; });
@@ -2149,8 +2179,8 @@ function renderExpRows() {
       + '</select>'
       + '<button class="bic er-del" data-ei="'+i+'">x</button>'
       + '</div><div class="ersub">'
-      + (outro ? '<input type="text" placeholder="Descrição" value="'+escA(e.desc||'')+'" data-ei="'+i+'" data-field="desc" style="flex:1;min-width:140px">' : '')
-      + '<label>Qtd</label><input type="number" min="0" step="any" value="'+e.qtd+'" data-ei="'+i+'" data-field="qtd" style="width:64px">'
+      + (outro ? '<input type="text" placeholder="Item" value="'+escA(e.desc||'')+'" data-ei="'+i+'" data-field="desc" style="flex:1;min-width:140px">' : '')
+      + '<label>Qtd'+(e.unidade?' ('+escA(e.unidade)+')':'')+'</label><input type="number" min="0" step="any" value="'+e.qtd+'" data-ei="'+i+'" data-field="qtd" style="width:64px">'
       + '<label>× Valor unit.</label><input type="number" min="0" step="0.01" value="'+(hasV(e.unit)?e.unit:'')+'" data-ei="'+i+'" data-field="unit" style="width:100px" placeholder="0,00">'
       + priceSel
       + '<span class="er-total">= <b id="er-tot-'+i+'">'+fmtM(r2((parseFloat(e.qtd)||0)*(parseFloat(e.unit)||0)))+'</b></span>'
@@ -3452,20 +3482,20 @@ function renderCatDespCad() {
     +'<button class="btn bsm bd2 aux-del-btn" data-key="'+k+'" data-id="'+a.id+'">X</button></div></td>'; }
   var rows='';
   cats.forEach(function(c){
-    var ci=its.filter(function(x){return x.catId===c.id;}).sort(function(a,b){return String(a.desc||'').localeCompare(String(b.desc||''),'pt-BR',{numeric:true});});
+    var ci=its.filter(function(x){return x.catId===c.id;}).sort(function(a,b){return String(a.desc||'').localeCompare(String(b.desc||''),'pt-BR',{numeric:true}) || String(a.cor||'').localeCompare(String(b.cor||''),'pt-BR');});
     if(!ci.length){
-      rows+='<tr><td style="font-weight:500">'+escA(c.name)+'</td><td style="color:var(--tx3)">—</td><td>'+fmtPr('')+'</td><td>'+fmtPr('')+'</td>'
+      rows+='<tr><td style="font-weight:500">'+escA(c.name)+'</td><td style="color:var(--tx3)">—</td><td></td><td></td><td>'+fmtPr('')+'</td><td>'+fmtPr('')+'</td>'
         +'<td>'+(c.active?'<span class="badge bg2">Ativo</span>':'<span class="badge bz">Inativo</span>')+'</td>'+btns('catDespesas',c)+'</tr>';
     }
     ci.forEach(function(it,j){
       rows+='<tr><td style="font-weight:500">'+(j===0?escA(c.name):'<span style="color:var(--tx3);font-weight:400">'+escA(c.name)+'</span>')+'</td>'
-        +'<td>'+escA(it.desc||'—')+'</td><td class="money">'+fmtPr(it.preco)+'</td><td class="money">'+fmtPr(it.precoPromo)+'</td>'
+        +'<td>'+escA(it.desc||'—')+'</td><td>'+escA(it.cor||'')+'</td><td>'+escA(it.unidade||'')+'</td><td class="money">'+fmtPr(it.preco)+'</td><td class="money">'+fmtPr(it.precoPromo)+'</td>'
         +'<td>'+(it.active&&c.active?'<span class="badge bg2">Ativo</span>':'<span class="badge bz">Inativo</span>')+'</td>'+btns('itensDespesa',it)+'</tr>';
     });
   });
   G('cad-ct').innerHTML='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn bp" id="cad-novo-btn">+ Novo Item</button></div>'
-    +'<div class="card"><div class="tw"><table><thead><tr><th>Categoria</th><th>Descrição</th><th>Preço unitário</th><th>Preço unitário promoção</th><th>Status</th><th></th></tr></thead><tbody>'
-    +(rows||'<tr><td colspan="6" class="te">Nenhum item</td></tr>')+'</tbody></table></div></div>';
+    +'<div class="card"><div class="tw"><table><thead><tr><th>Categoria</th><th>Item</th><th>Cor</th><th>Unidade</th><th>Preço unitário</th><th>Preço unitário promoção</th><th>Status</th><th></th></tr></thead><tbody>'
+    +(rows||'<tr><td colspan="8" class="te">Nenhum item</td></tr>')+'</tbody></table></div></div>';
 }
 function renderCad() {
   if (curCad==='catDespesas') { renderCatDespCad(); return; }
@@ -3507,15 +3537,17 @@ function openCatDespM(key, id) {
   G('m-aux').querySelector('.modal').style.maxWidth='460px';
   var it = key==='itensDespesa' ? (db.aux.itensDespesa||[]).find(function(x){return x.id===id;}) : null;
   var cat = it ? gAux('catDespesas').find(function(c){return c.id===it.catId;}) : (id ? gAux('catDespesas').find(function(c){return c.id===id;}) : null);
-  G('m-aux-t').textContent = it ? 'Editar item de despesa' : (cat ? 'Categoria '+cat.name : 'Novo item de despesa');
+  G('m-aux-t').textContent = it ? 'Editar item' : (cat ? 'Categoria '+cat.name : 'Novo item');
   var v=function(x){ return x===''||x==null ? '' : x; };
   G('m-aux-b').innerHTML='<div class="fg3">'
     +'<div class="fg s2"><label>Categoria *</label><input id="ax-name" type="text" list="dl-catdesp" value="'+escA(cat?cat.name:'')+'" placeholder="Escolha ou digite uma nova">'
     +'<datalist id="dl-catdesp">'+sortAlpha(gAux('catDespesas')).map(function(c){return '<option value="'+escA(c.name)+'">';}).join('')+'</datalist></div>'
-    +'<div class="fg s2"><label>Descrição</label><input id="ax-idesc" type="text" value="'+escA(it?it.desc:'')+'" placeholder="Ex.: Filtro Progeu 30"></div>'
+    +'<div class="fg s2"><label>Item</label><input id="ax-idesc" type="text" value="'+escA(it?it.desc:'')+'" placeholder="Ex.: Borda 15x50"></div>'
+    +'<div class="fg"><label>Cor</label><input id="ax-icor" type="text" value="'+escA(it?it.cor||'':'')+'" placeholder="Opcional"></div>'
+    +'<div class="fg"><label>Unidade</label><select id="ax-iun">'+[['',''+'—'],['un','un'],['m','m'],['m²','m²']].map(function(u){ return '<option value="'+u[0]+'"'+((it&&it.unidade||'')===u[0]?' selected':'')+'>'+u[1]+'</option>'; }).join('')+'</select></div>'
     +'<div class="fg"><label>Preço unitário (R$)</label><input id="ax-preco" type="number" min="0" step="0.01" value="'+v(it?it.preco:'')+'" placeholder="0,00"></div>'
     +'<div class="fg"><label>Preço unitário promoção (R$)</label><input id="ax-promo" type="number" min="0" step="0.01" value="'+v(it?it.precoPromo:'')+'" placeholder="0,00"></div>'
-    +'</div>'+(cat&&!it?'<div style="font-size:12px;color:var(--tx2);margin-top:8px">Deixe a descrição vazia para só renomear a categoria, ou preencha para adicionar um item nela.</div>':'');
+    +'</div>'+(cat&&!it?'<div style="font-size:12px;color:var(--tx2);margin-top:8px">Deixe o item vazio para só renomear a categoria, ou preencha para adicionar um item nela.</div>':'');
   openModal('m-aux');
 }
 function saveCatDesp() {
@@ -3530,10 +3562,10 @@ function saveCatDesp() {
     if (cat && cat.id!==auxEId) { showToast('Já existe a categoria '+cat.name); return; }
     if (c0) c0.name=catName;
   } else {
-    if (auxEType==='itensDespesa' && !desc) { showToast('Informe a descrição'); return; }
+    if (auxEType==='itensDespesa' && !desc) { showToast('Informe o item'); return; }
     if (!cat) { cat={id:uid(), name:catName, active:true}; cats.push(cat); }
     if (desc || preco!=='' || promo!=='') {
-      var data={catId:cat.id, desc:desc, preco:preco, precoPromo:promo};
+      var data={catId:cat.id, desc:desc, cor:G('ax-icor').value.trim(), unidade:G('ax-iun').value, preco:preco, precoPromo:promo};
       var it = auxEType==='itensDespesa' && auxEId ? its.find(function(x){return x.id===auxEId;}) : null;
       if (it) Object.assign(it, data); else its.push(Object.assign({id:uid(), active:true}, data));
     }
@@ -4221,9 +4253,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if(f==='itemId'){
       r.itemId=t.value; r.precoTipo='normal';
       var o=expItemOpts(r.catId).find(function(x){return x.id===t.value;});
-      if(o){ r.desc=o.desc.replace(' (modelo do cliente)',''); r.unit = hasV(o.preco)?o.preco:(hasV(o.precoPromo)?o.precoPromo:r.unit); if(!hasV(o.preco)&&hasV(o.precoPromo)) r.precoTipo='promo'; }
-      else if(t.value==='__outro'){ r.desc=r.desc||''; }
-      else { r.desc=''; }
+      if(o){ r.desc=o.base||o.desc; r.unidade=o.unidade||''; r.unit = hasV(o.preco)?o.preco:(hasV(o.precoPromo)?o.precoPromo:r.unit); if(!hasV(o.preco)&&hasV(o.precoPromo)) r.precoTipo='promo'; }
+      else if(t.value==='__outro'){ r.desc=r.desc||''; r.unidade=''; }
+      else { r.desc=''; r.unidade=''; }
       if(r.qtd==null||r.qtd==='') r.qtd=1;
       renderExpRows(); return;
     }
