@@ -896,8 +896,8 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
   <div class="mh"><div class="mt2" id="m-op-t">Nova Despesa Operacional</div><button class="mx" id="m-op-close">&#10005;</button></div>
   <div class="mb">
     <div class="fg3">
-      <div class="fg"><label>Centro de Custo *</label><select id="oe-cc"></select></div>
       <div class="fg"><label>Categoria</label><select id="oe-cat"></select></div>
+      <div class="fg"><label>Centro de Custo *</label><select id="oe-cc"></select><div id="oe-cc-hint" style="font-size:11px;color:var(--gn);display:none">Preenchido pela categoria</div></div>
       <div class="fg"><label>Valor (R$) *</label><input id="oe-val" type="number" min="0" step="0.01"></div>
       <div class="fg"><label>Vencimento *</label><input id="oe-venc" type="date"></div>
       <div class="fg s2"><label>Descricao</label><input id="oe-desc" type="text"></div>
@@ -2533,13 +2533,24 @@ function fillOpFilters() {
   G('op-fcat').innerHTML='<option value="">Todas categorias</option>'+gAux('catOp').filter(function(a){return a.active;}).map(function(a){return '<option value="'+a.id+'">'+a.name+'</option>';}).join('');
 }
 function fillCCSel() {
-  G('oe-cc').innerHTML='<option value="">Selecione...</option>'+gAux('centrosCusto').filter(function(a){return a.active;}).map(function(a){return '<option value="'+a.id+'">'+a.name+'</option>';}).join('');
+  G('oe-cc').innerHTML='<option value="">Selecione...</option>'+sortAlpha(gAux('centrosCusto').filter(function(a){return a.active;})).map(function(a){return '<option value="'+a.id+'">'+a.name+'</option>';}).join('');
+  G('oe-cat').value=''; G('oe-cc-hint').style.display='none'; opCcManual=false;
   fillOpCatSel();
 }
+var opCcManual=false;
 function fillOpCatSel() {
-  var ccId=(G('oe-cc')||{value:''}).value;
-  var cats=gAux('catOp').filter(function(a){return a.active&&(!ccId||!a.ccId||a.ccId===ccId);});
+  var ccId=opCcManual?(G('oe-cc')||{value:''}).value:'', cur=G('oe-cat').value;
+  var cats=sortAlpha(gAux('catOp').filter(function(a){return a.active&&(!ccId||!a.ccId||a.ccId===ccId);}));
   G('oe-cat').innerHTML='<option value="">Selecione...</option>'+cats.map(function(a){return '<option value="'+a.id+'">'+a.name+'</option>';}).join('');
+  if (cur && cats.some(function(a){return a.id===cur;})) G('oe-cat').value=cur;
+}
+// Ao escolher a categoria, o centro de custo vem do cadastro auxiliar da categoria
+function opCatChanged() {
+  var cat=gAux('catOp').find(function(a){return a.id===G('oe-cat').value;}), hint=G('oe-cc-hint');
+  if (cat && cat.ccId) {
+    if (!G('oe-cc').querySelector('option[value="'+cat.ccId+'"]')) G('oe-cc').insertAdjacentHTML('beforeend','<option value="'+cat.ccId+'">'+escA(auxN('centrosCusto',cat.ccId))+'</option>');
+    G('oe-cc').value=cat.ccId; opCcManual=false; hint.style.display='';
+  } else hint.style.display='none';
 }
 function openOpM(id) {
   eOpId=id||null; fillCCSel();
@@ -4260,7 +4271,8 @@ document.addEventListener('DOMContentLoaded', function() {
   G('op-fcc').addEventListener('change',renderOp);
   G('op-fcat').addEventListener('change',renderOp);
   G('op-fs').addEventListener('change',renderOp);
-  G('oe-cc').addEventListener('change',fillOpCatSel);
+  G('oe-cc').addEventListener('change',function(){ G('oe-cc-hint').style.display='none'; opCcManual=!!G('oe-cc').value; fillOpCatSel(); });
+  G('oe-cat').addEventListener('change',opCatChanged);
   G('m-op-close').addEventListener('click',function(){closeModal('m-op');});
   G('m-op-cancel').addEventListener('click',function(){closeModal('m-op');});
   G('m-op-save').addEventListener('click',saveOp);
