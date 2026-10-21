@@ -150,7 +150,9 @@ select.fl{padding:7px 10px;border:1px solid var(--bd2);border-radius:var(--rs);f
 .cm-tot td{background:var(--sf2);font-weight:700}
 .com-sep td{background:var(--sf2);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);font-weight:600}
 .frrow:last-child{border-bottom:none} .frsub{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 0 8px;border-bottom:1px solid var(--bd)} .frsub select{padding:5px 7px;font-size:12px} .frsub .rr-need{border-color:var(--rd)} .frrow input,.frrow select{padding:5px 7px;font-size:12px}
-.errow{display:grid;grid-template-columns:1fr 1fr 90px 90px 90px 26px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd)}
+.errow{display:grid;grid-template-columns:1fr 1.3fr 125px 95px 26px;gap:6px;align-items:center;padding:6px 0 4px}
+.erblk{border-bottom:1px solid var(--bd)} .erblk:last-child{border-bottom:none}
+.ersub{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 0 8px;font-size:12px;color:var(--tx2)} .ersub input,.ersub select{padding:5px 7px;font-size:12px} .er-total{margin-left:auto;color:var(--tx)}
 .errow:last-child{border-bottom:none} .errow input,.errow select{padding:5px 7px;font-size:12px}
 .fa{display:inline-flex;align-items:center;gap:5px;color:var(--ac);font-size:13px;cursor:pointer;padding:6px 0;font-weight:500}
 .money{font-family:var(--mo);font-size:13px} .pos{color:var(--gn)} .neg{color:var(--rd)}
@@ -871,10 +873,9 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
     </div>
     <div class="tp" id="ct3">
       <div class="alert ai">A data define o periodo no Fluxo de Caixa e DRE.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 90px 90px 90px 26px;gap:6px;padding:3px 0 6px;border-bottom:2px solid var(--bd)">
+      <div style="display:grid;grid-template-columns:1fr 1.3fr 125px 95px 26px;gap:6px;padding:3px 0 6px;border-bottom:2px solid var(--bd)">
         <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Categoria</span>
-        <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Descricao</span>
-        <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Valor</span>
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Descrição</span>
         <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Data</span>
         <span style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--tx3)">Status</span>
         <span></span>
@@ -1118,6 +1119,7 @@ function isProdFunc(f){ return f && PROD_FUNCS.some(function(n){ return normTxt(
 })();
 if (!db.comissMes) db.comissMes = {};
 if (!db.transferencias) db.transferencias = [];
+if (!db.aux.itensDespesa) db.aux.itensDespesa = [];
 (function migOutrasPct(){ var pc=(db.comissoes||{}).pct||{}, ch=false;
   Object.keys(pc).forEach(function(k){ var r=pc[k]; if(r && r.outras!=null && r.outras!=='' ){ if(r.outrasProprio==null) r.outrasProprio=r.outras; if(r.outrasTerceiros==null) r.outrasTerceiros=r.outras; delete r.outras; ch=true; } });
   if(ch) localStorage.setItem(DBK, JSON.stringify(db)); })();
@@ -2100,17 +2102,45 @@ function updRecTot() {
   var liqTot = recRows.reduce(function(a,r){ return a + payCalc(r.valor, r).liq; }, 0);
   G('c-rec-tot').innerHTML = fmtM(total) + (Math.abs(liqTot-total)>0.004 ? ' <span style="color:var(--tx2);font-weight:400;font-size:12px">· líquido '+fmtM(liqTot)+'</span>' : '');
 }
+// Opções de descrição por categoria (itens cadastrados; na categoria Fábrica também os modelos de piscina)
+function expItemOpts(catId) {
+  var out = (db.aux.itensDespesa||[]).filter(function(x){ return x.catId===catId && x.active; })
+    .sort(function(a,b){ return String(a.desc).localeCompare(String(b.desc),'pt-BR',{numeric:true}); })
+    .map(function(x){ return {id:x.id, desc:x.desc, preco:x.preco, precoPromo:x.precoPromo}; });
+  var cat = gAux('catDespesas').find(function(c){ return c.id===catId; });
+  if (cat && /fabrica|casco/.test(normTxt(cat.name))) {
+    var mid = (G('c-modelo')||{}).value;
+    sortAlpha(gAux('modelos').filter(function(m){ return m.active; })).sort(function(a,b){ return (b.id===mid) - (a.id===mid); }).forEach(function(m){
+      if ((m.preco===''||m.preco==null) && (m.precoPromo===''||m.precoPromo==null) && m.id!==mid) return;
+      out.push({id:'mod:'+m.id, desc:'Modelo '+m.name+(m.id===mid?' (modelo do cliente)':''), preco:m.preco, precoPromo:m.precoPromo});
+    });
+  }
+  return out;
+}
+function hasV(v){ return !(v===''||v==null); }
 function renderExpRows() {
   var el = G('c-exp-rows');
-  var cats = gAux('catDespesas').filter(function(a){return a.active;});
+  var cats = sortAlpha(gAux('catDespesas').filter(function(a){return a.active;}));
   if (!expRows.length) { el.innerHTML='<div style="color:var(--tx3);font-size:13px;padding:6px 0">Nenhuma despesa.</div>'; updExpTot(); return; }
   var html = '';
   expRows.forEach(function(e, i) {
-    var catOpts = cats.map(function(c){return '<option value="'+c.id+'"'+(e.catId===c.id?' selected':'')+'>'+c.name+'</option>';}).join('');
-    html += '<div class="errow">'
+    if (e.qtd==null || e.qtd==='') { e.qtd = 1; e.unit = parseFloat(e.valor)||0; }
+    var catOpts = cats.map(function(c){return '<option value="'+c.id+'"'+(e.catId===c.id?' selected':'')+'>'+escA(c.name)+'</option>';}).join('');
+    var opts = e.catId ? expItemOpts(e.catId) : [];
+    var outro = e.itemId==='__outro' || (!e.itemId && e.desc);
+    var itemSel = '<select data-ei="'+i+'" data-field="itemId" class="er-item"><option value="">Descrição…</option>'
+      + opts.map(function(o){ return '<option value="'+o.id+'"'+(e.itemId===o.id?' selected':'')+'>'+escA(o.desc)+'</option>'; }).join('')
+      + '<option value="__outro"'+(outro?' selected':'')+'>Outra (digitar)</option></select>';
+    var cur = opts.find(function(o){ return o.id===e.itemId; });
+    var priceSel = '';
+    if (cur && hasV(cur.preco) && hasV(cur.precoPromo)) {
+      priceSel = '<select data-ei="'+i+'" data-field="precoTipo" style="width:auto">'
+        + '<option value="normal"'+(e.precoTipo!=='promo'?' selected':'')+'>Normal '+fmtM(cur.preco)+'</option>'
+        + '<option value="promo"'+(e.precoTipo==='promo'?' selected':'')+'>Promoção '+fmtM(cur.precoPromo)+'</option></select>';
+    }
+    html += '<div class="erblk"><div class="errow">'
       + '<select data-ei="'+i+'" data-field="catId" class="er-cat"><option value="">Categoria</option>'+catOpts+'</select>'
-      + '<input type="text" placeholder="Descricao" value="'+(e.desc||'')+'" data-ei="'+i+'" data-field="desc" class="er-desc">'
-      + '<input type="number" placeholder="Valor" value="'+(e.valor||'')+'" data-ei="'+i+'" data-field="valor" class="er-val" min="0" step="0.01">'
+      + itemSel
       + '<input type="date" value="'+(e.data||'')+'" data-ei="'+i+'" data-field="data" class="er-data">'
       + '<select data-ei="'+i+'" data-field="status" class="er-st">'
         + '<option value="PREVISTO"'+(e.status==='PREVISTO'?' selected':'')+'>Previsto</option>'
@@ -2118,16 +2148,25 @@ function renderExpRows() {
         + '<option value="REALIZADO"'+(e.status==='REALIZADO'?' selected':'')+'>Realizado</option>'
       + '</select>'
       + '<button class="bic er-del" data-ei="'+i+'">x</button>'
-      + '</div>';
+      + '</div><div class="ersub">'
+      + (outro ? '<input type="text" placeholder="Descrição" value="'+escA(e.desc||'')+'" data-ei="'+i+'" data-field="desc" style="flex:1;min-width:140px">' : '')
+      + '<label>Qtd</label><input type="number" min="0" step="any" value="'+e.qtd+'" data-ei="'+i+'" data-field="qtd" style="width:64px">'
+      + '<label>× Valor unit.</label><input type="number" min="0" step="0.01" value="'+(hasV(e.unit)?e.unit:'')+'" data-ei="'+i+'" data-field="unit" style="width:100px" placeholder="0,00">'
+      + priceSel
+      + '<span class="er-total">= <b id="er-tot-'+i+'">'+fmtM(r2((parseFloat(e.qtd)||0)*(parseFloat(e.unit)||0)))+'</b></span>'
+      + '</div></div>';
   });
   el.innerHTML = html;
   updExpTot();
 }
 function updExpTot() {
   var total = 0;
-  var inputs = G('c-exp-rows').querySelectorAll('.er-val');
-  inputs.forEach(function(inp) { total += parseFloat(inp.value) || 0; });
-  inputs.forEach(function(inp) { var i = parseInt(inp.getAttribute('data-ei')); if (!isNaN(i) && expRows[i]) expRows[i].valor = parseFloat(inp.value)||0; });
+  expRows.forEach(function(e, i){
+    if (e.qtd==null || e.qtd==='') { e.qtd=1; e.unit=parseFloat(e.valor)||0; }
+    e.valor = r2((parseFloat(e.qtd)||0) * (parseFloat(e.unit)||0));
+    total += e.valor;
+    var t = G('er-tot-'+i); if (t) t.textContent = fmtM(e.valor);
+  });
   G('c-exp-tot').textContent = fmtM(total);
 }
 function saveClient() {
@@ -3404,15 +3443,41 @@ function cadTab(type) {
   renderCad();
 }
 function sortAlpha(arr){ return arr.slice().sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||''),'pt-BR',{sensitivity:'base',numeric:true}); }); }
+function fmtPr(v){ return (v===''||v==null) ? '<span style="color:var(--tx3)">—</span>' : fmtM(v); }
+function renderCatDespCad() {
+  var cats=sortAlpha(gAux('catDespesas')), its=db.aux.itensDespesa||[];
+  function btns(k,a){ return '<td><div style="display:flex;gap:4px">'
+    +'<button class="btn bsm bs aux-edit-btn" data-key="'+k+'" data-id="'+a.id+'">Editar</button>'
+    +'<button class="btn bsm bs aux-tog-btn" data-key="'+k+'" data-id="'+a.id+'">'+(a.active?'Inativar':'Ativar')+'</button>'
+    +'<button class="btn bsm bd2 aux-del-btn" data-key="'+k+'" data-id="'+a.id+'">X</button></div></td>'; }
+  var rows='';
+  cats.forEach(function(c){
+    var ci=its.filter(function(x){return x.catId===c.id;}).sort(function(a,b){return String(a.desc||'').localeCompare(String(b.desc||''),'pt-BR',{numeric:true});});
+    if(!ci.length){
+      rows+='<tr><td style="font-weight:500">'+escA(c.name)+'</td><td style="color:var(--tx3)">—</td><td>'+fmtPr('')+'</td><td>'+fmtPr('')+'</td>'
+        +'<td>'+(c.active?'<span class="badge bg2">Ativo</span>':'<span class="badge bz">Inativo</span>')+'</td>'+btns('catDespesas',c)+'</tr>';
+    }
+    ci.forEach(function(it,j){
+      rows+='<tr><td style="font-weight:500">'+(j===0?escA(c.name):'<span style="color:var(--tx3);font-weight:400">'+escA(c.name)+'</span>')+'</td>'
+        +'<td>'+escA(it.desc||'—')+'</td><td class="money">'+fmtPr(it.preco)+'</td><td class="money">'+fmtPr(it.precoPromo)+'</td>'
+        +'<td>'+(it.active&&c.active?'<span class="badge bg2">Ativo</span>':'<span class="badge bz">Inativo</span>')+'</td>'+btns('itensDespesa',it)+'</tr>';
+    });
+  });
+  G('cad-ct').innerHTML='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn bp" id="cad-novo-btn">+ Novo Item</button></div>'
+    +'<div class="card"><div class="tw"><table><thead><tr><th>Categoria</th><th>Descrição</th><th>Preço unitário</th><th>Preço unitário promoção</th><th>Status</th><th></th></tr></thead><tbody>'
+    +(rows||'<tr><td colspan="6" class="te">Nenhum item</td></tr>')+'</tbody></table></div></div>';
+}
 function renderCad() {
+  if (curCad==='catDespesas') { renderCatDespCad(); return; }
   var key=curCad, items=sortAlpha(gAux(key));
-  var isArq=key==='arquitetos', isCatOp=key==='catOp', isFP=key==='formasPag', isFunc=key==='funcionarios';
+  var isArq=key==='arquitetos', isCatOp=key==='catOp', isFP=key==='formasPag', isFunc=key==='funcionarios', isMod=key==='modelos';
   var hasDesc=['modelos','revestimentos','tipologias','centrosCusto'].indexOf(key)>=0;
   var html='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn bp" id="cad-novo-btn">+ Novo Item</button></div>'
     +(isFunc&&!gAux('funcoes').length?'<div class="alert ai" style="margin-bottom:10px">Cadastre primeiro as Funções para relacionar aos funcionários.</div>':'')
     +'<div class="card"><div class="tw"><table><thead><tr><th>Nome</th>'
     +(isArq?'<th>Telefone</th><th>E-mail</th><th>Comissao %</th>':'')
     +(hasDesc?'<th>Descricao</th>':'')
+    +(isMod?'<th>Preço</th><th>Preço promoção</th>':'')
     +(isCatOp?'<th>Centro de Custo</th>':'')
     +(isFP?'<th>Tipo</th><th>Recebimento</th><th>Taxa</th>':'')
     +(isFunc?'<th>Função</th>':'')
@@ -3422,6 +3487,7 @@ function renderCad() {
       html+='<tr><td style="font-weight:500">'+a.name+'</td>'
         +(isArq?'<td>'+(a.phone||'-')+'</td><td>'+(a.email||'-')+'</td><td>'+(a.commission||0)+'%</td>':'')
         +(hasDesc?'<td style="color:var(--tx2)">'+(a.desc||'-')+'</td>':'')
+        +(isMod?'<td class="money">'+fmtPr(a.preco)+'</td><td class="money">'+fmtPr(a.precoPromo)+'</td>':'')
         +(isCatOp?'<td>'+auxN('centrosCusto',a.ccId)+'</td>':'')
         +(isFP?fpCadCells(a):'')
         +(isFunc?'<td>'+(a.funcaoId?auxN('funcoes',a.funcaoId):'<span style="color:var(--tx3)">—</span>')+'</td>':'')
@@ -3436,7 +3502,46 @@ function renderCad() {
   html+='</tbody></table></div></div>';
   G('cad-ct').innerHTML=html;
 }
+function openCatDespM(key, id) {
+  auxEType=key; auxEId=id||null; fpDraft=null;
+  G('m-aux').querySelector('.modal').style.maxWidth='460px';
+  var it = key==='itensDespesa' ? (db.aux.itensDespesa||[]).find(function(x){return x.id===id;}) : null;
+  var cat = it ? gAux('catDespesas').find(function(c){return c.id===it.catId;}) : (id ? gAux('catDespesas').find(function(c){return c.id===id;}) : null);
+  G('m-aux-t').textContent = it ? 'Editar item de despesa' : (cat ? 'Categoria '+cat.name : 'Novo item de despesa');
+  var v=function(x){ return x===''||x==null ? '' : x; };
+  G('m-aux-b').innerHTML='<div class="fg3">'
+    +'<div class="fg s2"><label>Categoria *</label><input id="ax-name" type="text" list="dl-catdesp" value="'+escA(cat?cat.name:'')+'" placeholder="Escolha ou digite uma nova">'
+    +'<datalist id="dl-catdesp">'+sortAlpha(gAux('catDespesas')).map(function(c){return '<option value="'+escA(c.name)+'">';}).join('')+'</datalist></div>'
+    +'<div class="fg s2"><label>Descrição</label><input id="ax-idesc" type="text" value="'+escA(it?it.desc:'')+'" placeholder="Ex.: Filtro Progeu 30"></div>'
+    +'<div class="fg"><label>Preço unitário (R$)</label><input id="ax-preco" type="number" min="0" step="0.01" value="'+v(it?it.preco:'')+'" placeholder="0,00"></div>'
+    +'<div class="fg"><label>Preço unitário promoção (R$)</label><input id="ax-promo" type="number" min="0" step="0.01" value="'+v(it?it.precoPromo:'')+'" placeholder="0,00"></div>'
+    +'</div>'+(cat&&!it?'<div style="font-size:12px;color:var(--tx2);margin-top:8px">Deixe a descrição vazia para só renomear a categoria, ou preencha para adicionar um item nela.</div>':'');
+  openModal('m-aux');
+}
+function saveCatDesp() {
+  var catName=G('ax-name').value.trim(), desc=G('ax-idesc').value.trim();
+  var pv=function(id){ var x=G(id).value; return x===''?'':(parseFloat(x)||0); };
+  var preco=pv('ax-preco'), promo=pv('ax-promo');
+  if(!catName){ showToast('Informe a categoria'); return; }
+  var cats=db.aux.catDespesas, its=db.aux.itensDespesa;
+  var cat=cats.find(function(c){return normTxt(c.name)===normTxt(catName);});
+  if (auxEType==='catDespesas' && auxEId && !desc && preco==='' && promo==='') {
+    var c0=cats.find(function(c){return c.id===auxEId;});
+    if (cat && cat.id!==auxEId) { showToast('Já existe a categoria '+cat.name); return; }
+    if (c0) c0.name=catName;
+  } else {
+    if (auxEType==='itensDespesa' && !desc) { showToast('Informe a descrição'); return; }
+    if (!cat) { cat={id:uid(), name:catName, active:true}; cats.push(cat); }
+    if (desc || preco!=='' || promo!=='') {
+      var data={catId:cat.id, desc:desc, preco:preco, precoPromo:promo};
+      var it = auxEType==='itensDespesa' && auxEId ? its.find(function(x){return x.id===auxEId;}) : null;
+      if (it) Object.assign(it, data); else its.push(Object.assign({id:uid(), active:true}, data));
+    }
+  }
+  sdb(); closeModal('m-aux'); renderCad(); showToast('Salvo!');
+}
 function openAuxM(key, id) {
+  if (key==='catDespesas' || key==='itensDespesa') { openCatDespM(key, id); return; }
   auxEType=key; auxEId=id||null;
   var item=id?(gAux(key).find(function(a){return a.id===id;})||null):null;
   var isArq=key==='arquitetos', isCatOp=key==='catOp', isFP=key==='formasPag', isFunc=key==='funcionarios';
@@ -3444,6 +3549,8 @@ function openAuxM(key, id) {
   G('m-aux-t').textContent=id?'Editar Item':'Novo Item';
   var html='<div class="fg3"><div class="fg s2"><label>Nome *</label><input id="ax-name" type="text" value="'+(item?item.name:'')+'" placeholder="Nome do item"></div>';
   if(hasDesc)html+='<div class="fg s2"><label>Descricao</label><input id="ax-desc" type="text" value="'+(item&&item.desc?item.desc:'')+'" placeholder="Opcional"></div>';
+  if(key==='modelos')html+='<div class="fg"><label>Preço (R$)</label><input id="ax-mpreco" type="number" min="0" step="0.01" value="'+(item&&item.preco!=null&&item.preco!==''?item.preco:'')+'" placeholder="0,00"></div>'
+    +'<div class="fg"><label>Preço promoção (R$)</label><input id="ax-mpromo" type="number" min="0" step="0.01" value="'+(item&&item.precoPromo!=null&&item.precoPromo!==''?item.precoPromo:'')+'" placeholder="0,00"></div>';
   if(isArq)html+='<div class="fg"><label>Telefone</label><input id="ax-phone" type="text" value="'+(item&&item.phone?item.phone:'')+'"></div>'
     +'<div class="fg"><label>E-mail</label><input id="ax-email" type="email" value="'+(item&&item.email?item.email:'')+'"></div>'
     +'<div class="fg"><label>Comissao (%)</label><input id="ax-comm" type="number" value="'+(item&&item.commission?item.commission:0)+'" min="0" max="100" step="0.1"></div>';
@@ -3553,6 +3660,7 @@ function fpSet(path, val){
   } else d[p[0]] = bool(p[0]) ? val==='1' : val;
 }
 function saveAux() {
+  if (auxEType==='catDespesas' || auxEType==='itensDespesa') { saveCatDesp(); return; }
   var name=(G('ax-name')||{value:''}).value.trim(); if(!name){showToast('Informe o nome');return;}
   var key=auxEType, isArq=key==='arquitetos', isCatOp=key==='catOp', isFP=key==='formasPag', isFunc=key==='funcionarios';
   var hasDesc=['modelos','revestimentos','tipologias','centrosCusto'].indexOf(key)>=0;
@@ -3560,6 +3668,7 @@ function saveAux() {
   if(hasDesc)data.desc=(G('ax-desc')||{value:''}).value;
   if(isArq){data.phone=(G('ax-phone')||{value:''}).value;data.email=(G('ax-email')||{value:''}).value;data.commission=parseFloat((G('ax-comm')||{value:0}).value)||0;}
   if(isCatOp)data.ccId=(G('ax-cc')||{value:''}).value;
+  if(key==='modelos'){ var mp=G('ax-mpreco').value, mq=G('ax-mpromo').value; data.preco=mp===''?'':(parseFloat(mp)||0); data.precoPromo=mq===''?'':(parseFloat(mq)||0); }
   if(isFunc){ data.funcaoId=(G('ax-funcao')||{value:''}).value; data.vendedorId=(G('ax-vendlink')||{value:''}).value; if(!data.funcaoId){ showToast('Selecione a função'); return; } }
   if(isFP){
     var d=fpDraft;
@@ -4043,7 +4152,7 @@ document.addEventListener('DOMContentLoaded', function() {
   G('m-cli-cancel').addEventListener('click', function(){closeModal('m-cli');});
   G('m-cli-save').addEventListener('click', saveClient);
   G('btn-add-rec').addEventListener('click', function(){recRows.push({id:uid(),valor:0,venc:'',forma:'',status:'PREVISTO',obs:''});renderRecRows();});
-  G('btn-add-exp').addEventListener('click', function(){expRows.push({id:uid(),catId:'',desc:'',valor:0,data:'',status:'PREVISTO'});renderExpRows();});
+  G('btn-add-exp').addEventListener('click', function(){expRows.push({id:uid(),catId:'',itemId:'',desc:'',qtd:1,unit:'',precoTipo:'normal',valor:0,data:'',status:'PREVISTO'});renderExpRows();});
 
   // REC ROWS delegation
   G('c-rec-rows').addEventListener('input', function(e){var t=e.target;var i=parseInt(t.getAttribute('data-ri'));if(isNaN(i))return;var f=t.getAttribute('data-field');if(f==='valor'){recRows[i].valor=parseFloat(t.value)||0;updRecTot();}else if(f)recRows[i][f]=t.value;updRrHint(i);});
@@ -4105,8 +4214,22 @@ document.addEventListener('DOMContentLoaded', function() {
   G('c-rec-rows').addEventListener('click', function(e){var btn=e.target.closest('.rr-del');if(btn){var i=parseInt(btn.getAttribute('data-ri'));recRows.splice(i,1);renderRecRows();}});
 
   // EXP ROWS delegation
-  G('c-exp-rows').addEventListener('input', function(e){var t=e.target;var i=parseInt(t.getAttribute('data-ei'));if(isNaN(i))return;var f=t.getAttribute('data-field');if(f==='valor'){expRows[i].valor=parseFloat(t.value)||0;updExpTot();}else if(f)expRows[i][f]=t.value;});
-  G('c-exp-rows').addEventListener('change', function(e){var t=e.target;var i=parseInt(t.getAttribute('data-ei'));if(isNaN(i))return;var f=t.getAttribute('data-field');if(f){expRows[i][f]=t.value;}updExpTot();});
+  G('c-exp-rows').addEventListener('input', function(e){var t=e.target;var i=parseInt(t.getAttribute('data-ei'));if(isNaN(i))return;var f=t.getAttribute('data-field');if(!f)return;
+    if(f==='qtd'||f==='unit'){expRows[i][f]=t.value===''?'':(parseFloat(t.value)||0);updExpTot();} else if(f==='desc'||f==='data') expRows[i][f]=t.value;});
+  G('c-exp-rows').addEventListener('change', function(e){var t=e.target;var i=parseInt(t.getAttribute('data-ei'));if(isNaN(i))return;var f=t.getAttribute('data-field');if(!f)return;var r=expRows[i];
+    if(f==='catId'){ r.catId=t.value; r.itemId=''; r.precoTipo='normal'; if(!r.desc||r.itemId!=='__outro') r.desc=''; renderExpRows(); return; }
+    if(f==='itemId'){
+      r.itemId=t.value; r.precoTipo='normal';
+      var o=expItemOpts(r.catId).find(function(x){return x.id===t.value;});
+      if(o){ r.desc=o.desc.replace(' (modelo do cliente)',''); r.unit = hasV(o.preco)?o.preco:(hasV(o.precoPromo)?o.precoPromo:r.unit); if(!hasV(o.preco)&&hasV(o.precoPromo)) r.precoTipo='promo'; }
+      else if(t.value==='__outro'){ r.desc=r.desc||''; }
+      else { r.desc=''; }
+      if(r.qtd==null||r.qtd==='') r.qtd=1;
+      renderExpRows(); return;
+    }
+    if(f==='precoTipo'){ r.precoTipo=t.value; var o2=expItemOpts(r.catId).find(function(x){return x.id===r.itemId;}); if(o2) r.unit = t.value==='promo'?o2.precoPromo:o2.preco; renderExpRows(); return; }
+    if(f==='qtd'||f==='unit'){ r[f]=t.value===''?'':(parseFloat(t.value)||0); updExpTot(); return; }
+    r[f]=t.value; updExpTot();});
   G('c-exp-rows').addEventListener('click', function(e){var btn=e.target.closest('.er-del');if(btn){var i=parseInt(btn.getAttribute('data-ei'));expRows.splice(i,1);renderExpRows();}});
 
   // MODAL OVERLAY CLOSE
@@ -4212,6 +4335,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var c=db.clients.find(function(x){return x.id===cid;}); if(!c||!c.expenses[idx])return;
     var e=c.expenses[idx];
     e.valor=parseFloat(G('dve-val').value)||e.valor;
+    if(!e.qtd) e.qtd=1; e.unit=r2(e.valor/(parseFloat(e.qtd)||1));
     e.data=G('dve-data').value||e.data;
     e.desc=G('dve-desc').value.trim();
     e.status=G('dve-st').value;
