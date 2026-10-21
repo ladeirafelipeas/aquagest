@@ -254,6 +254,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 21/10/2026 · 16:00</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -2157,10 +2158,12 @@ function expItemOpts(catId) {
 }
 function hasV(v){ return !(v===''||v==null); }
 function isRtCat(catId){ var c=gAux('catDespesas').find(function(x){return x.id===catId;}); return !!c && /^rt\b/.test(normTxt(c.name)) && /arquitet/.test(normTxt(c.name)); }
-function recBaseTotal(){ return r2(recRows.reduce(function(a,r){ return a+(parseFloat(r.valor)||0); },0)); }
+function recBaseTotal(){ var t=r2(recRows.reduce(function(a,r){ return a+(parseFloat(r.valor)||0); },0)); return t>0 ? t : (parseFloat((G('c-valor')||{}).value)||0); }
+function recBaseLbl(){ var t=recRows.reduce(function(a,r){ return a+(parseFloat(r.valor)||0); },0); return t>0 ? 'total de recebimento' : 'valor total da venda — sem parcelas em Recebimentos'; }
 function arqPctPadrao(){ var a=gAux('arquitetos').find(function(x){ return x.id===(G('c-arq')||{}).value; }); return a && parseFloat(a.commission) ? parseFloat(a.commission) : ''; }
 function rtDesc(r){ var a=gAux('arquitetos').find(function(x){ return x.id===(G('c-arq')||{}).value; }); return 'RT Arquiteto'+(hasV(r.rtPct)?' '+String(r.rtPct).replace('.',',')+'%':'')+(a?' — '+a.name:''); }
 function renderExpRows() {
+  if (!gAux('catDespesas').some(function(c){ return normTxt(c.name)==='modelo'; })) { db.aux.catDespesas.push({id:uid(), name:'Modelo', active:true}); sdb(); }
   var el = G('c-exp-rows');
   var cats = sortAlpha(gAux('catDespesas').filter(function(a){return a.active;}));
   if (!expRows.length) { el.innerHTML='<div style="color:var(--tx3);font-size:13px;padding:6px 0">Nenhuma despesa.</div>'; updExpTot(); return; }
@@ -2195,7 +2198,7 @@ function renderExpRows() {
       + (outro ? '<input type="text" placeholder="Item" value="'+escA(e.desc||'')+'" data-ei="'+i+'" data-field="desc" style="flex:1;min-width:140px">' : '')
       + (rt
         ? '<label>% RT</label><input type="number" min="0" step="0.01" value="'+(hasV(e.rtPct)?e.rtPct:'')+'" data-ei="'+i+'" data-field="rtPct" style="width:70px" placeholder="%">'
-          + '<span>× '+fmtM(recBaseTotal())+' <span style="color:var(--tx3)">(total de recebimento)</span></span>'
+          + '<span>× '+fmtM(recBaseTotal())+' <span style="color:var(--tx3)">('+recBaseLbl()+')</span></span>'
           + '<label>= Valor</label><input type="number" min="0" step="0.01" id="er-unit-'+i+'" value="'+(hasV(e.unit)?e.unit:'')+'" data-ei="'+i+'" data-field="unit" style="width:110px" placeholder="0,00">'
           + (hasV(e.rtPct) && Math.abs((parseFloat(e.unit)||0) - r2(recBaseTotal()*e.rtPct/100))>0.004 ? '<button type="button" class="btn bsm bs er-rt-recalc" data-ei="'+i+'" title="Recalcular com o total de recebimento atual">↻ Recalcular</button>' : '')
         : '<label>Qtd'+(e.unidade?' ('+escA(e.unidade)+')':'')+'</label><input type="number" min="0" step="any" value="'+e.qtd+'" data-ei="'+i+'" data-field="qtd" style="width:64px">'
@@ -4730,7 +4733,7 @@ function cloudInit(){
     if (window.FIREBASE_CONFIG && !window.firebase) { document.body.classList.add('locked'); authLoading(false); G('au-err').textContent='Sem conexão: não foi possível carregar o login.'; }
     return;
   }
-  G('sb-mode').textContent = 'Dados na nuvem · v3.0';
+  G('sb-mode').textContent = 'Dados na nuvem';
   firebase.initializeApp(window.FIREBASE_CONFIG);
   fbAuth = firebase.auth(); fbDb = firebase.firestore();
   authLoading(true);
