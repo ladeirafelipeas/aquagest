@@ -152,6 +152,8 @@ select.fl{padding:7px 10px;border:1px solid var(--bd2);border-radius:var(--rs);f
 .frrow:last-child{border-bottom:none} .frsub{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 0 8px;border-bottom:1px solid var(--bd)} .frsub select{padding:5px 7px;font-size:12px} .frsub .rr-need{border-color:var(--rd)} .frrow input,.frrow select{padding:5px 7px;font-size:12px}
 .errow{display:grid;grid-template-columns:1fr 1.3fr 125px 95px 26px;gap:6px;align-items:center;padding:6px 0 4px}
 .erblk{border-bottom:1px solid var(--bd)} .erblk:last-child{border-bottom:none}
+.er-ent{display:inline-flex;gap:6px;align-items:center;padding:2px 8px;border-left:2px solid var(--bd)}
+.rm-tb td{vertical-align:middle} .rm-tb input,.rm-tb select{padding:5px 7px;font-size:12px;width:auto} .rm-tb .rm-val{width:110px;text-align:right}
 .ersub{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 0 8px;font-size:12px;color:var(--tx2)} .ersub input,.ersub select{padding:5px 7px;font-size:12px} .er-total{margin-left:auto;color:var(--tx)}
 .errow:last-child{border-bottom:none} .errow input,.errow select{padding:5px 7px;font-size:12px}
 .fa{display:inline-flex;align-items:center;gap:5px;color:var(--ac);font-size:13px;cursor:pointer;padding:6px 0;font-weight:500}
@@ -261,7 +263,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 21/10/2026 · 20:00</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 22/10/2026 · 10:00</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -361,7 +363,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
 </div>
 
 <div class="page" id="p-clientes">
-  <div class="ph"><div><div class="pt">Clientes</div><div class="ps">Cadastro e acompanhamento</div></div><button class="btn bp" id="btn-novo-cliente">+ Novo Cliente</button></div>
+  <div class="ph"><div><div class="pt">Clientes</div><div class="ps">Cadastro e acompanhamento</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn bs" id="btn-rel-modelos">&#128203; Relatório de Modelos</button><button class="btn bp" id="btn-novo-cliente">+ Novo Cliente</button></div></div>
   <div class="pb">
     <div class="sb2">
       <div class="sw"><span class="sic">&#128269;</span><input class="si" type="text" placeholder="Buscar nome, cidade, CPF..." id="cli-q"></div>
@@ -942,6 +944,23 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
     <div style="font-size:12px;color:var(--tx2);margin-top:8px">Só esta parcela é alterada. Se o valor for diferente do previsto, a diferença é tratada como taxa financeira.</div>
   </div>
   <div class="mf"><button class="btn bs" id="mp-restore" style="margin-right:auto">Voltar ao previsto</button><button class="btn bs" id="mp-cancel">Cancelar</button><button class="btn bp" id="mp-save">Salvar parcela</button></div>
+</div>
+</div>
+
+<div id="m-relmod" class="mov">
+<div class="modal" style="max-width:1180px">
+  <div class="mh"><div class="mt2">Relatório de Modelos</div><button class="mx" id="rm-close">&#10005;</button></div>
+  <div class="mb">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <input type="search" id="rm-q" placeholder="Buscar cliente ou modelo…" style="flex:1;min-width:180px">
+      <select id="rm-mod" style="width:auto"></select>
+      <select id="rm-st" style="width:auto"><option value="">Todos os pagamentos</option><option value="REALIZADO">Pagamento realizado</option><option value="PREVISTO">Pagamento previsto</option><option value="LANCADO">Pagamento lançado</option></select>
+      <select id="rm-ent" style="width:auto"><option value="">Entregue e não entregue</option><option value="S">Só entregues</option><option value="N">Só não entregues</option></select>
+    </div>
+    <div class="kg" id="rm-kpis"></div>
+    <div class="tw"><table class="rm-tb"><thead><tr><th>Cliente</th><th>Modelo</th><th style="text-align:right">Valor</th><th>Data pagamento</th><th>Pagamento</th><th>Entregue</th><th>Data entrega</th><th></th></tr></thead><tbody id="rm-tb"></tbody></table></div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:8px">As alterações feitas aqui são salvas na hora e atualizam a despesa da obra no cadastro do cliente.</div>
+  </div>
 </div>
 </div>
 
@@ -2175,6 +2194,62 @@ function expItemOpts(catId) {
   return out;
 }
 function hasV(v){ return !(v===''||v==null); }
+// ═══ RELATÓRIO DE MODELOS (despesas da obra na categoria Modelo) ═══
+function relModRows(){
+  var out=[];
+  db.clients.forEach(function(c){ (c.expenses||[]).forEach(function(e,idx){
+    if (!isModeloCat(e.catId)) return;
+    var mid = String(e.itemId||'').indexOf('mod:')===0 ? e.itemId.slice(4) : '';
+    out.push({c:c, e:e, idx:idx, mid:mid, nome: mid ? auxN('modelos',mid) : (e.desc||'—')});
+  }); });
+  return out.sort(function(a,b){ var da=a.c.dvenda||'9999', dbb=b.c.dvenda||'9999'; return da<dbb?-1:(da>dbb?1:String(a.c.nome).localeCompare(String(b.c.nome),'pt-BR')); });
+}
+function openRelMod(){
+  var mods = {}; relModRows().forEach(function(r){ mods[r.nome]=1; });
+  G('rm-mod').innerHTML = '<option value="">Todos os modelos</option>' + Object.keys(mods).sort(function(a,b){return a.localeCompare(b,'pt-BR',{numeric:true});}).map(function(n){ return '<option value="'+escA(n)+'">'+escA(n)+'</option>'; }).join('');
+  renderRelMod(); openModal('m-relmod');
+}
+function renderRelMod(){
+  var q=normTxt(G('rm-q').value).split(' ').filter(Boolean), fm=G('rm-mod').value, fs=G('rm-st').value, fe=G('rm-ent').value;
+  var rows = relModRows().filter(function(r){
+    if (fm && r.nome!==fm) return false;
+    if (fs && (r.e.status||'PREVISTO')!==fs) return false;
+    if (fe==='S' && r.e.entregue!=='S') return false;
+    if (fe==='N' && r.e.entregue==='S') return false;
+    if (q.length) { var t=normTxt(r.c.nome+' '+r.nome); if (!q.every(function(k){ return t.indexOf(k)>=0; })) return false; }
+    return true;
+  });
+  var tot=0, nPrev=0, nLanc=0, nReal=0, nEnt=0;
+  rows.forEach(function(r){ tot+=parseFloat(r.e.valor)||0; var st=r.e.status||'PREVISTO'; if(st==='REALIZADO')nReal++; else if(st==='LANCADO')nLanc++; else nPrev++; if(r.e.entregue==='S')nEnt++; });
+  G('rm-kpis').innerHTML='<div class="kc ca"><div class="kl">Modelos</div><div class="kv">'+rows.length+'</div><div class="ks">'+fmtM(tot)+'</div></div>'
+    +'<div class="kc cg"><div class="kl">Pagamento realizado</div><div class="kv">'+nReal+'</div></div>'
+    +'<div class="kc co"><div class="kl">Pagamento lançado</div><div class="kv">'+nLanc+'</div></div>'
+    +'<div class="kc"><div class="kl">Pagamento previsto</div><div class="kv">'+nPrev+'</div></div>'
+    +'<div class="kc cg"><div class="kl">Entregues</div><div class="kv">'+nEnt+' / '+rows.length+'</div></div>';
+  var modOpts = sortAlpha(gAux('modelos').filter(function(m){return m.active;}));
+  G('rm-tb').innerHTML = rows.length ? rows.map(function(r){
+    var e=r.e, st=e.status||'PREVISTO', key='data-cid="'+r.c.id+'" data-idx="'+r.idx+'"';
+    return '<tr><td><div style="font-weight:500">'+escA(r.c.nome)+'</div><div style="font-size:11px;color:var(--tx3)">venda '+fmtD(r.c.dvenda)+'</div></td>'
+      +'<td><select '+key+' data-f="modelo"><option value="">'+(r.mid?'':escA(r.nome))+'</option>'+modOpts.map(function(m){ return '<option value="'+m.id+'"'+(m.id===r.mid?' selected':'')+'>'+escA(m.name)+'</option>'; }).join('')+'</select></td>'
+      +'<td style="text-align:right"><input type="number" min="0" step="0.01" class="rm-val" '+key+' data-f="valor" value="'+(parseFloat(e.valor)||0)+'"></td>'
+      +'<td><input type="date" '+key+' data-f="data" value="'+(e.data||'')+'"></td>'
+      +'<td><select '+key+' data-f="status"><option value="PREVISTO"'+(st==='PREVISTO'?' selected':'')+'>Previsto</option><option value="LANCADO"'+(st==='LANCADO'?' selected':'')+'>Lançado</option><option value="REALIZADO"'+(st==='REALIZADO'?' selected':'')+'>Realizado</option></select></td>'
+      +'<td><select '+key+' data-f="entregue"><option value=""'+(e.entregue!=='S'?' selected':'')+'>Não</option><option value="S"'+(e.entregue==='S'?' selected':'')+'>Sim</option></select></td>'
+      +'<td><input type="date" '+key+' data-f="dtEntrega" value="'+(e.dtEntrega||'')+'"></td>'
+      +'<td><button class="btn bsm bs rm-open" data-cid="'+r.c.id+'">Abrir venda</button></td></tr>';
+  }).join('') : '<tr><td colspan="8" class="te">Nenhum modelo lançado com esses filtros. Os modelos aparecem aqui quando são lançados em Despesas da Obra na categoria Modelo.</td></tr>';
+}
+function relModEdit(t){
+  var c=db.clients.find(function(x){ return x.id===t.getAttribute('data-cid'); }); if(!c) return;
+  var e=(c.expenses||[])[parseInt(t.getAttribute('data-idx'))]; if(!e) return;
+  var f=t.getAttribute('data-f'), v=t.value;
+  if (f==='valor') { e.valor=r2(parseFloat(v)||0); var q=parseFloat(e.qtd)||1; e.qtd=q; e.unit=r2(e.valor/q); }
+  else if (f==='modelo') { if(v){ var m=gAux('modelos').find(function(x){return x.id===v;}); e.itemId='mod:'+v; e.desc=m?m.name:e.desc; } }
+  else if (f==='status') { e.status=v; if (v==='REALIZADO' && !e.def) e.def=today(); }
+  else e[f]=v;
+  sdb(); showToast('Atualizado'); renderRelMod();
+}
+function isModeloCat(catId){ var c=gAux('catDespesas').find(function(x){return x.id===catId;}); return !!c && normTxt(c.name)==='modelo'; }
 // Campo Item pesquisável: se o texto bate com um item cadastrado, preenche o preço; senão vira descrição livre
 function itemInfo(o){ return [o.hint, hasV(o.preco)?fmtM(o.preco):'', hasV(o.precoPromo)?'promo '+fmtM(o.precoPromo):'', o.unidade?o.unidade:''].filter(Boolean).join(' · '); }
 function renderItemDrop(i){
@@ -2293,6 +2368,8 @@ function renderExpRows() {
         : '<label>Qtd'+(e.unidade?' ('+escA(e.unidade)+')':'')+'</label><input type="number" min="0" step="any" value="'+e.qtd+'" data-ei="'+i+'" data-field="qtd" style="width:64px">'
           + '<label>× Valor unit.</label><input type="number" min="0" step="0.01" value="'+(hasV(e.unit)?e.unit:'')+'" data-ei="'+i+'" data-field="unit" style="width:100px" placeholder="0,00">')
       + priceSel
+      + (isModeloCat(e.catId) ? '<span class="er-ent"><label>Entregue</label><select data-ei="'+i+'" data-field="entregue" style="width:auto"><option value=""'+(e.entregue!=='S'?' selected':'')+'>Não</option><option value="S"'+(e.entregue==='S'?' selected':'')+'>Sim</option></select>'
+          + '<label>Data entrega</label><input type="date" data-ei="'+i+'" data-field="dtEntrega" value="'+(e.dtEntrega||'')+'" style="width:auto"></span>' : '')
       + '<span class="er-total">= <b id="er-tot-'+i+'">'+fmtM(r2((parseFloat(e.qtd)||0)*(parseFloat(e.unit)||0)))+'</b></span>'
       + '</div></div>';
   });
@@ -4320,6 +4397,12 @@ document.addEventListener('DOMContentLoaded', function() {
     cadQ=e.target.value; var pos=e.target.selectionStart; renderCad();
     var q=G('cad-q'); if(q){ q.focus(); try{ q.setSelectionRange(pos,pos); }catch(err){} }
   });
+  G('btn-rel-modelos').addEventListener('click', openRelMod);
+  G('rm-close').addEventListener('click', function(){ closeModal('m-relmod'); });
+  ['rm-mod','rm-st','rm-ent'].forEach(function(id){ G(id).addEventListener('change', renderRelMod); });
+  G('rm-q').addEventListener('input', renderRelMod);
+  G('rm-tb').addEventListener('change', function(e){ if (e.target.getAttribute('data-f')) relModEdit(e.target); });
+  G('rm-tb').addEventListener('click', function(e){ var b=e.target.closest('.rm-open'); if(!b) return; closeModal('m-relmod'); openCM(b.getAttribute('data-cid')); cliTabSwitch(3); });
   G('btn-add-exp').addEventListener('click', function(){expRows.push({id:uid(),catId:'',itemId:'',desc:'',qtd:1,unit:'',precoTipo:'normal',valor:0,data:'',status:'PREVISTO'});renderExpRows();});
 
   // REC ROWS delegation
