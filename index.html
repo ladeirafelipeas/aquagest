@@ -263,7 +263,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 22/10/2026 · 10:00</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 23/10/2026 · 08:30</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -533,6 +533,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       </div>
     </div>
     <div class="sb2">
+      <input type="search" class="fl" id="dv-q" placeholder="Buscar cliente, categoria, descrição, valor, data…" style="flex:1;min-width:200px">
       <select class="fl" id="dv-fs"><option value="">Todos os status</option><option value="PREVISTO">Previsto</option><option value="LANCADO">Lancado</option><option value="REALIZADO">Realizado</option></select>
       <select class="fl" id="dv-fcat"><option value="">Todas categorias</option></select>
     </div>
@@ -2774,6 +2775,12 @@ function renderDV() {
     if(!noFilterDV && !inRange(eDate,from,to))return;
     all.push({v:parseFloat(e.valor)||0,catId:e.catId,desc:e.desc,data:eDate,status:e.status,cn:c.nome,cid:c.id,idx:i});
   });});
+  var dq=normTxt((G('dv-q')||{value:''}).value).split(' ').filter(Boolean);
+  if (dq.length) all = all.filter(function(e){
+    var st={PREVISTO:'previsto',LANCADO:'lancado',REALIZADO:'realizado'}[e.status]||'';
+    var txt=normTxt([e.cn, auxN('catDespesas',e.catId), e.desc, st, fmtM(e.v), String(e.v), fmtD(e.data)].join(' '));
+    return dq.every(function(t){ return txt.indexOf(t)>=0; });
+  });
   all.sort(function(a,b){ return (a.data||'9999')<(b.data||'9999')?-1:((a.data||'9999')>(b.data||'9999')?1:String(a.cn).localeCompare(String(b.cn),'pt-BR')); });
   var pv=0,ln=0,rl=0;
   all.forEach(function(e){if(e.status==='PREVISTO')pv+=e.v; else if(e.status==='LANCADO')ln+=e.v; else if(e.status==='REALIZADO')rl+=e.v;});
@@ -4582,6 +4589,7 @@ document.addEventListener('DOMContentLoaded', function() {
   G('dv-apply-btn').addEventListener('click', renderDV);
   G('dv-fs').addEventListener('change', renderDV);
   G('dv-fcat').addEventListener('change', renderDV);
+  G('dv-q').addEventListener('input', renderDV);
   G('dv-tb').addEventListener('click',function(e){
     var eb=e.target.closest('.dv-edit-btn');
     if(eb){ openDvEdit(eb.getAttribute('data-cid'),parseInt(eb.getAttribute('data-idx'))); return; }
