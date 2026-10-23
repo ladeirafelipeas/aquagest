@@ -264,7 +264,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 23/10/2026 · 16:30</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 23/10/2026 · 16:45</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -367,7 +367,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
   <div class="ph"><div><div class="pt">Clientes</div><div class="ps">Cadastro e acompanhamento</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn bs" id="btn-rel-modelos">&#128203; Relatório de Modelos</button><button class="btn bp" id="btn-novo-cliente">+ Novo Cliente</button></div></div>
   <div class="pb">
     <div class="sb2">
-      <div class="sw"><span class="sic">&#128269;</span><input class="si" type="text" placeholder="Buscar nome, cidade, CPF..." id="cli-q"></div>
+      <div class="sw"><span class="sic">&#128269;</span><input class="si" type="text" placeholder="Buscar nome, cidade, CPF, contrato..." id="cli-q"></div>
       <select class="fl" id="cli-fs"><option value="">Todos os status</option><option value="VENDIDO">Vendido</option><option value="EM_INSTALACAO">Em Instalacao</option><option value="ENTREGUE">Entregue</option><option value="TREINADO">Treinado</option></select>
       <input type="month" class="fl" id="cli-fm" style="padding:6px 10px;font-size:13px" title="Filtrar por mês da venda">
       <select class="fl" id="cli-fa"><option value="">Todos parceiros</option></select>
@@ -848,6 +848,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
     </div>
     <div class="tp" id="ct1">
       <div class="fg3">
+        <div class="fg"><label>Numero do Contrato</label><input id="c-contrato" type="text" placeholder="Ex.: 2026/045" autocomplete="off"></div>
         <div class="fg"><label>Modelo da Piscina</label>
           <div class="combo-wrap" id="combo-modelo-wrap">
             <input type="text" id="c-modelo-txt" class="combo-input" placeholder="Digite para buscar..." autocomplete="off">
@@ -1774,6 +1775,7 @@ function openCM(id) {
     setComboVal('arq','arquitetos',c.arqId||'');
     G('c-valor').value = c.valor||'';
     ['dvenda','diprev','dief','deprev','deef','dtrein'].forEach(function(f){G('c-'+f).value=c[f]||'';});
+    G('c-contrato').value=c.contrato||'';
     G('c-obs').value = c.obs||''; G('c-pend').value = c.pend||'';
     setStar(c.rating||0);
     recRows = JSON.parse(JSON.stringify(c.receipts||[])).map(function(r){r.valor=parseFloat(r.valor)||0;return r;});
@@ -1788,6 +1790,7 @@ function openCM(id) {
     setComboVal('modelo','modelos',''); setComboVal('arq','arquitetos','');
     G('c-valor').value='';
     ['dvenda','diprev','dief','deprev','deef','dtrein'].forEach(function(f){G('c-'+f).value='';});
+    G('c-contrato').value='';
     setStar(0);
   }
   if (G('c-exp-q')) G('c-exp-q').value='';
@@ -2436,7 +2439,7 @@ function saveClient() {
     bairro:G('c-bairro').value.trim(), cidade:G('c-cidade').value.trim(), estado:G('c-estado').value,
     modeloId:G('c-modelo').value, revId:G('c-rev').value, origId:G('c-orig').value,
     arqId:G('c-arq').value, vendId:G('c-vend').value, tipoId:G('c-tipo').value,
-    valor:parseFloat(G('c-valor').value)||0, dvenda:G('c-dvenda').value, diprev:G('c-diprev').value,
+    valor:parseFloat(G('c-valor').value)||0, contrato:G('c-contrato').value.trim(), dvenda:G('c-dvenda').value, diprev:G('c-diprev').value,
     dief:G('c-dief').value, deprev:G('c-deprev').value, deef:G('c-deef').value, dtrein:G('c-dtrein').value,
     obs:G('c-obs').value.trim(), pend:G('c-pend').value.trim(), rating:curStar,
     receipts:recRows, expenses:expRows, avalEquipe:avalDraft,
@@ -2457,7 +2460,7 @@ function renderClients() {
   var fa=(G('cli-fa')||{value:''}).value, fv=(G('cli-fv')||{value:''}).value;
   var fm=(G('cli-fm')||{value:''}).value; // filtro mês da venda
   var rows = db.clients.filter(function(c) {
-    var txt = [c.nome,c.cidade,c.doc,c.email].join(' ').toLowerCase();
+    var txt = [c.nome,c.cidade,c.doc,c.email,c.contrato].join(' ').toLowerCase();
     if (q && txt.indexOf(q)<0) return false;
     if (fs && cliSt(c)!==fs) return false;
     if (fa && c.arqId!==fa) return false;
@@ -2474,7 +2477,7 @@ function renderClients() {
   if (!rows.length) { tb.innerHTML='<tr><td colspan="8" class="te">Nenhum cliente</td></tr>'; return; }
   tb.innerHTML = rows.map(function(c) {
     return '<tr>'
-      +'<td><div style="font-weight:500">'+c.nome+'</div><div style="font-size:11px;color:var(--tx2)">'+(c.tel||'')+'</div></td>'
+      +'<td><div style="font-weight:500">'+c.nome+'</div><div style="font-size:11px;color:var(--tx2)">'+(c.contrato?'Contrato '+escA(c.contrato)+(c.tel?' · ':''):'')+(c.tel||'')+'</div></td>'
       +'<td>'+(c.cidade||'-')+(c.estado?' / '+c.estado:'')+'</td>'
       +'<td>'+auxN('modelos',c.modeloId)+'</td><td><span class="money">'+fmtM(c.valor)+'</span></td>'
       +'<td>'+fmtD(c.dvenda)+'</td><td>'+auxN('vendedores',c.vendId)+'</td><td>'+bdg(cliSt(c))+'</td>'
