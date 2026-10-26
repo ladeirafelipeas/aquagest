@@ -264,7 +264,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 23/10/2026 · 16:45</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 26/10/2026 · 11:30</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -570,6 +570,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       </div>
     </div>
     <div class="sb2">
+      <input type="search" class="fl" id="op-q" placeholder="Buscar descrição, categoria, centro, NF, valor, data…" style="flex:1;min-width:200px">
       <select class="fl" id="op-fcc"><option value="">Todos centros de custo</option></select>
       <select class="fl" id="op-fcat"><option value="">Todas categorias</option></select>
       <select class="fl" id="op-fs"><option value="">Todos os status</option><option value="PREVISTO">Previsto</option><option value="LANCADO">Lancado</option><option value="REALIZADO">Realizado</option></select>
@@ -747,6 +748,10 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
             <option value="LANCADO">Lancado</option>
             <option value="REALIZADO">Realizado</option>
           </select>
+        </div>
+        <div class="fg" style="flex:1 1 220px;min-width:200px">
+          <label>Buscar</label>
+          <input type="search" id="or-q" class="fl" placeholder="Descrição, categoria, vendedor, forma, valor, data…">
         </div>
       </div>
     </div>
@@ -2921,10 +2926,16 @@ function renderOp() {
   var fs=(G('op-fs')||{value:''}).value;
   var pr=pRange('op'), from=pr.from, to=pr.to;
   var noFilterOp = (!from && !to);
+  var oq=normTxt((G('op-q')||{value:''}).value).split(' ').filter(Boolean);
   var rows=db.opExp.filter(function(e){
     if(fcc&&e.ccId!==fcc)return false; if(fcat&&e.catId!==fcat)return false;
     if(fs&&e.status!==fs)return false;
     if(!noFilterOp && !inRange(e.venc,from,to))return false;
+    if(oq.length){
+      var st={PREVISTO:'previsto',LANCADO:'lancado',REALIZADO:'realizado'}[e.status]||'';
+      var txt=normTxt([auxN('centrosCusto',e.ccId), auxN('catOp',e.catId), e.desc, e.nf, st, fmtM(e.valor), String(e.valor), fmtD(e.venc), fmtD(e.def)].join(' '));
+      if(!oq.every(function(t){ return txt.indexOf(t)>=0; })) return false;
+    }
     return true;
   }).sort(function(a,b){ return cmpOrd(dOrd(a.status==='REALIZADO',a.def,a.venc), dOrd(b.status==='REALIZADO',b.def,b.venc), a.desc, b.desc); });
   var pv=0,ln=0,rl=0;
@@ -4225,16 +4236,26 @@ function fillOrCatSelect(selId) {
 function renderOutrasRec() {
   var pr = pRange('or'), from = pr.from, to = pr.to;
   var fst = G('or-fs') ? G('or-fs').value : '';
+  var oq = normTxt((G('or-q')||{value:''}).value).split(' ').filter(Boolean);
+  var orMatch = function(r){
+    if (!oq.length) return true;
+    var st={PREVISTO:'previsto',LANCADO:'lancado',REALIZADO:'realizado'}[r.status]||'';
+    var pc=payCalc(r.valor,r);
+    var txt=normTxt([auxN('catOutrasRec',r.catId), r.desc, r.vendId?auxN('vendedores',r.vendId):'', r.forma, st, fmtM(pc.liq), fmtM(pc.gross), String(r.valor), fmtD(r.dprev), fmtD(r.def)].join(' '));
+    return oq.every(function(t){ return txt.indexOf(t)>=0; });
+  };
   var items = (db.outrasRec||[]).filter(function(r){
     var d = r.dprev || r.def || '';
     if (!inRange(d, from, to)) return false;
     if (fst && r.status !== fst) return false;
+    if (!orMatch(r)) return false;
     return true;
   }).sort(function(a,b){ return cmpOrd(dOrd(a.status==='REALIZADO',a.def,a.dprev), dOrd(b.status==='REALIZADO',b.def,b.dprev), a.desc, b.desc); });
   var tReal=0, tLanc=0, tPrev=0;
   orRecs().forEach(function(r){
     var d = r.dprev || r.def || '';
     if (!inRange(d, from, to)) return;
+    if (oq.length && !orMatch((db.outrasRec||[]).find(function(x){return x.id===r.id;})||r)) return;
     var v = parseFloat(r.valor)||0;
     if(r.status==='REALIZADO') tReal+=v;
     else if(r.status==='LANCADO') tLanc+=v;
@@ -4779,6 +4800,7 @@ document.addEventListener('DOMContentLoaded', function() {
   G('op-t').addEventListener('change', renderOp);
   G('op-apply-btn').addEventListener('click', renderOp);
   G('op-fcc').addEventListener('change',renderOp);
+  G('op-q').addEventListener('input',renderOp);
   G('op-fcat').addEventListener('change',renderOp);
   G('op-fs').addEventListener('change',renderOp);
   G('oe-cc').addEventListener('change',function(){ G('oe-cc-hint').style.display='none'; opCcManual=!!G('oe-cc').value; fillOpCatSel(); });
@@ -4865,6 +4887,7 @@ document.addEventListener('DOMContentLoaded', function() {
   G('or-t').addEventListener('change', renderOutrasRec);
   G('or-apply-btn').addEventListener('click', renderOutrasRec);
   G('or-fs').addEventListener('change', renderOutrasRec);
+  G('or-q').addEventListener('input', renderOutrasRec);
   G('btn-nova-outrec').addEventListener('click', function(){openOrModal(null);});
   G('m-outrec-close').addEventListener('click', function(){closeModal('m-outrec');});
   G('m-outrec-cancel').addEventListener('click', function(){closeModal('m-outrec');});
