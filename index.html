@@ -119,6 +119,14 @@ textarea{resize:vertical;min-height:64px}
 .ti{padding:8px 14px;font-size:13px;font-weight:500;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap}
 .ti:hover{color:var(--tx)} .ti.active{color:var(--ac);border-bottom-color:var(--ac)}
 .tp{display:none} .tp.active{display:block}
+.ld-table input{width:64px;padding:5px 6px;text-align:center;border:1px solid var(--bd);border-radius:6px;background:var(--sf,#fff);font:inherit}
+.ld-table td,.ld-table th{text-align:center}
+.ld-table td:first-child,.ld-table th:first-child{text-align:left;white-space:nowrap}
+.fn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.fn-k{border:1px solid var(--bd);border-radius:10px;padding:12px 14px;background:var(--sf,#fff)}
+.fn-k .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx2)}
+.fn-k .v{font-size:22px;font-weight:700;margin-top:4px}
+.fn-k .h{font-size:11px;color:var(--tx3);margin-top:2px}
 .sb2{display:flex;gap:8px;align-items:center;margin-bottom:13px;flex-wrap:wrap}
 .sw{position:relative;flex:1;min-width:160px}
 .si{width:100%;padding:7px 10px 7px 30px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;font-family:var(--fn);outline:none}
@@ -244,6 +252,8 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
   <div class="ni" id="nav-metas"><span class="nic">&#127945;</span> Metas</div>
   <div class="ni" id="nav-analytics"><span class="nic">&#128269;</span> Analise de Vendas</div>
   <div class="ni" id="nav-res-cliente"><span class="nic">&#127942;</span> Result. por Cliente</div>
+  <div class="ni" id="nav-leads"><span class="nic">&#128229;</span> Leads</div>
+  <div class="ni" id="nav-visitas"><span class="nic">&#127968;</span> Visitas</div>
   <div class="ni" id="nav-clientes"><span class="nic">&#128101;</span> Clientes</div>
   <div class="nsec">Financeiro</div>
   <div class="ni" id="nav-outras-rec"><span class="nic">&#10133;</span> Outras Receitas</div>
@@ -264,7 +274,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 26/10/2026 · 11:30</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 27/10/2026 · 09:30</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -359,7 +369,56 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
     </div>
     <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--tx2);margin-bottom:9px">Metricas (clique para ativar/desativar)</div>
     <div class="met-grid" id="met-cards"></div>
+    <div id="ana-funil"></div>
     <div id="ana-results"></div>
+  </div>
+</div>
+
+<div class="page" id="p-leads">
+  <div class="ph"><div><div class="pt">Leads</div><div class="ps">Quantidade de leads por vendedor e origem, mês a mês</div></div></div>
+  <div class="pb">
+    <div class="pbar"><div class="pbar-row">
+      <div class="fg" style="flex:0 0 auto"><label>Mês</label><input type="month" id="ld-m" class="fl" style="width:auto"></div>
+      <div class="fg" style="flex:0 0 auto;align-self:flex-end"><button class="btn bs bsm" id="ld-prev">&#9664; Mês anterior</button> <button class="btn bs bsm" id="ld-next">Próximo mês &#9654;</button></div>
+    </div></div>
+    <div class="kg" id="ld-kpis"></div>
+    <div class="card"><div class="ch">Leads do mês <span style="font-weight:400;color:var(--tx2);font-size:12px">— digite a quantidade; salva automaticamente</span></div>
+      <div class="tw"><table class="ld-table"><thead id="ld-th"></thead><tbody id="ld-tb"></tbody><tfoot id="ld-tf"></tfoot></table></div>
+    </div>
+    <div style="font-size:12px;color:var(--tx3);margin-top:8px">Vendedores e origens vêm de Cadastros Auxiliares.</div>
+  </div>
+</div>
+
+<div class="page" id="p-visitas">
+  <div class="ph"><div><div class="pt">Visitas</div><div class="ps">Registro de visitas a clientes e à loja</div></div><button class="btn bp" id="btn-nova-visita">+ Nova Visita</button></div>
+  <div class="pb" style="padding-bottom:0;padding-top:14px">
+    <div class="pbar">
+      <div class="pbar-lbl">Filtro de Periodo</div>
+      <div class="pbar-row">
+        <div class="fg" style="flex:0 0 auto"><label>Tipo</label>
+          <select id="vi-pt" class="fl" style="width:auto;min-width:140px">
+            <option value="month">Mes</option><option value="week">Semana</option><option value="custom">Periodo</option><option value="all">Todo o periodo</option>
+          </select>
+        </div>
+        <div class="fg" id="vi-mw" style="flex:0 0 auto"><label>Mes</label><input type="month" id="vi-m" class="fl" style="width:auto"></div>
+        <div class="fg" id="vi-ww" style="display:none;flex:0 0 auto"><label>Semana (início)</label><input type="date" id="vi-ws" class="fl" style="width:auto"></div>
+        <div class="fg" id="vi-fw" style="display:none;flex:0 0 auto"><label>De</label><input type="date" id="vi-f" class="fl" style="width:auto"></div>
+        <div class="fg" id="vi-tw" style="display:none;flex:0 0 auto"><label>Ate</label><input type="date" id="vi-t" class="fl" style="width:auto"></div>
+      </div>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="sb2">
+      <input type="search" class="fl" id="vi-q" placeholder="Buscar nome, bairro, vendedor, local, data…" style="flex:1;min-width:200px">
+      <select class="fl" id="vi-fv"><option value="">Todos vendedores</option></select>
+      <select class="fl" id="vi-fb"><option value="">Todos bairros</option></select>
+      <select class="fl" id="vi-fl"><option value="">Todos os locais</option><option value="CASA">Casa do cliente</option><option value="LOJA">Loja</option><option value="AMBOS">Cliente e loja</option></select>
+    </div>
+    <div class="kg" id="vi-kpis"></div>
+    <div class="card"><div class="tw"><table>
+      <thead><tr><th>Data</th><th>Cliente</th><th>Bairro</th><th>Local</th><th>Vendedor</th><th>Origem</th><th>Obs.</th><th></th></tr></thead>
+      <tbody id="vi-tb"></tbody>
+    </table></div></div>
   </div>
 </div>
 
@@ -1110,6 +1169,30 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
   </div>
 </div>
 </div>
+<div id="m-visita" class="mov">
+<div class="modal" style="max-width:520px">
+  <div class="mh"><div class="mt2" id="m-visita-t">Nova Visita</div><button class="mx" id="m-visita-close">&#10005;</button></div>
+  <div class="mb">
+    <div class="fg3">
+      <div class="fg s2"><label>Nome do cliente *</label><input id="vi-nome" type="text" autocomplete="off"></div>
+      <div class="fg"><label>Data da visita *</label><input id="vi-data" type="date"></div>
+      <div class="fg s2"><label>Bairro</label>
+        <div class="combo-wrap"><input type="text" id="vi-bairro" class="combo-input" placeholder="Digite ou selecione..." autocomplete="off"><div class="combo-drop" id="combo-vi-bairro-drop"></div></div>
+      </div>
+      <div class="fg"><label>Local da visita *</label>
+        <select id="vi-local"><option value="">— selecione —</option><option value="CASA">Casa do cliente</option><option value="LOJA">Loja</option><option value="AMBOS">Cliente e loja</option></select>
+      </div>
+      <div class="fg"><label>Vendedor *</label><select id="vi-vend"></select></div>
+      <div class="fg"><label>Origem do lead</label><select id="vi-orig"></select></div>
+      <div class="fg s2"><label>Observações</label><textarea id="vi-obs" rows="2"></textarea></div>
+    </div>
+  </div>
+  <div class="mf">
+    <button class="btn bs" id="m-visita-cancel">Cancelar</button>
+    <button class="btn bp" id="m-visita-save">Salvar</button>
+  </div>
+</div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -1151,6 +1234,8 @@ function sdb() {
 var db = loadDB();
 if (!db.manut) db.manut = [];
 if (!db.outrasRec) db.outrasRec = [];
+if (!db.visitas) db.visitas = [];
+if (!db.leads) db.leads = {};
 if (!db.aux) db.aux = {};
 if (!db.aux.bairros) db.aux.bairros = [];
 if (!db.aux.catOutrasRec) db.aux.catOutrasRec = [];
@@ -1554,6 +1639,8 @@ function importDB(input) {
           if (!db.aux.funcionarios) db.aux.funcionarios = [];
           if (!db.comissoes) db.comissoes = {porMetro:{}, indicacao:{}, google5:{}, avalCli:{}, pct:{}};
           if (!db.outrasRec) db.outrasRec = [];
+          if (!db.visitas) db.visitas = [];
+          if (!db.leads) db.leads = {};
           if (!db.caixas) db.caixas = [];
           if (typeof CLOUD !== 'undefined' && CLOUD && cloudReady) {
             showToast('Enviando dados para a nuvem…');
@@ -1637,6 +1724,8 @@ function go(p) {
   if (p==='dashboard') { G('dash-pt').value='month'; G('dash-m').value=curM(); pSetup('dash'); renderDash(); }
   else if (p==='analytics') initAna();
   else if (p==='clientes') { fillCliFilters(); renderClients(); }
+  else if (p==='leads') { if(!G('ld-m').value) G('ld-m').value=curM(); renderLeads(); }
+  else if (p==='visitas') { if(!G('vi-m').value) G('vi-m').value=curM(); if(!G('vi-ws').value) G('vi-ws').value=today(); pSetup('vi'); fillViFilters(); renderVisitas(); }
   else if (p==='recebimentos') { pSetup('rec'); renderRec(); }
   else if (p==='desp-venda') { pSetup('dv'); renderDV(); }
   else if (p==='desp-op') { fillOpFilters(); pSetup('op'); renderOp(); }
@@ -3543,6 +3632,191 @@ var _bairroNomes={};
 function bairroKey(t){ var n=normTxt(t); if(!_bairroNomes[n]){ var cad=gAux('bairros').find(function(b){ return normTxt(b.name)===n; }); _bairroNomes[n]=cad?cad.name:t.replace(/\s+/g,' ').replace(/(^|\s)\S/g,function(m){return m.toUpperCase();}); } return _bairroNomes[n]; }
 var METS=[{id:'qtd_modelo',label:'Qtd. por Modelo'},{id:'qtd_origem',label:'Qtd. por Origem'},{id:'qtd_tipologia',label:'Qtd. por Tipologia'},{id:'ticket_medio',label:'Ticket Medio por Modelo'},{id:'valor_vendedor',label:'Valor por Vendedor'},{id:'valor_arquiteto',label:'Valor por Parceiro'},{id:'qtd_bairro',label:'Qtd. por Bairro'}];
 var anaActive=new Set(['qtd_modelo','qtd_origem','qtd_tipologia','ticket_medio','valor_vendedor','valor_arquiteto','qtd_bairro']);
+
+// ═══ LEADS ═══
+var VI_LOCAL={CASA:'Casa do cliente',LOJA:'Loja',AMBOS:'Cliente e loja'};
+function ldMonthAdd(m,n){ var d=new Date(m+'-01T12:00:00'); d.setMonth(d.getMonth()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function ldVendList(m){
+  var data=(db.leads||{})[m]||{};
+  return sortAlpha(gAux('vendedores').filter(function(a){ return a.active || data[a.id]; }));
+}
+function ldOrigList(m){
+  var data=(db.leads||{})[m]||{}, used={};
+  Object.keys(data).forEach(function(v){ Object.keys(data[v]||{}).forEach(function(o){ if(data[v][o]) used[o]=1; }); });
+  return sortAlpha(gAux('origens').filter(function(a){ return a.active || used[a.id]; }));
+}
+function renderLeads(){
+  var m=G('ld-m').value||curM(); G('ld-m').value=m;
+  var data=(db.leads||{})[m]||{};
+  var vs=ldVendList(m), os=ldOrigList(m);
+  if(!vs.length||!os.length){
+    G('ld-th').innerHTML=''; G('ld-tf').innerHTML=''; G('ld-kpis').innerHTML='';
+    G('ld-tb').innerHTML='<tr><td class="te">Cadastre vendedores e origens em Cadastros Auxiliares.</td></tr>'; return;
+  }
+  G('ld-th').innerHTML='<tr><th>Vendedor</th>'+os.map(function(o){return '<th>'+escA(o.name)+'</th>';}).join('')+'<th>Total</th></tr>';
+  G('ld-tb').innerHTML=vs.map(function(v){
+    var row=data[v.id]||{};
+    return '<tr><td style="font-weight:500">'+escA(v.name)+'</td>'+os.map(function(o){
+      var n=row[o.id]; return '<td><input type="number" min="0" step="1" inputmode="numeric" class="ld-in" data-v="'+v.id+'" data-o="'+o.id+'" value="'+(n?n:'')+'" placeholder="0"></td>';
+    }).join('')+'<td class="ld-rt" data-v="'+v.id+'" style="font-weight:600"></td></tr>';
+  }).join('');
+  ldTotals();
+}
+function ldTotals(){
+  var m=G('ld-m').value||curM(), data=(db.leads||{})[m]||{};
+  var vs=ldVendList(m), os=ldOrigList(m), tot=0, best=null;
+  var colT={};
+  vs.forEach(function(v){
+    var rt=0; os.forEach(function(o){ var n=parseInt((data[v.id]||{})[o.id])||0; rt+=n; colT[o.id]=(colT[o.id]||0)+n; });
+    tot+=rt; var c=document.querySelector('.ld-rt[data-v="'+v.id+'"]'); if(c) c.textContent=rt;
+  });
+  os.forEach(function(o){ if(colT[o.id] && (!best||colT[o.id]>colT[best.id])) best=o; });
+  G('ld-tf').innerHTML='<tr style="font-weight:700"><td>Total</td>'+os.map(function(o){return '<td>'+(colT[o.id]||0)+'</td>';}).join('')+'<td>'+tot+'</td></tr>';
+  var prevM=ldMonthAdd(m,-1), prevT=ldTotalMonth(prevM);
+  G('ld-kpis').innerHTML='<div class="kc ca"><div class="kl">Leads no mês</div><div class="kv">'+tot+'</div></div>'
+    +'<div class="kc"><div class="kl">Mês anterior</div><div class="kv">'+prevT+'</div></div>'
+    +'<div class="kc"><div class="kl">Principal origem</div><div class="kv" style="font-size:18px">'+(best?escA(best.name)+' ('+colT[best.id]+')':'-')+'</div></div>';
+}
+function ldTotalMonth(m){ var d=(db.leads||{})[m]||{}, t=0; Object.keys(d).forEach(function(v){ Object.keys(d[v]||{}).forEach(function(o){ t+=parseInt(d[v][o])||0; }); }); return t; }
+var _ldSaveT=null;
+function ldOnInput(inp){
+  var m=G('ld-m').value||curM(), v=inp.getAttribute('data-v'), o=inp.getAttribute('data-o');
+  var n=Math.max(0, parseInt(inp.value)||0);
+  if(!db.leads) db.leads={};
+  if(!db.leads[m]) db.leads[m]={};
+  if(!db.leads[m][v]) db.leads[m][v]={};
+  if(n) db.leads[m][v][o]=n; else delete db.leads[m][v][o];
+  ldTotals();
+  clearTimeout(_ldSaveT); _ldSaveT=setTimeout(function(){ sdb(); }, 500);
+}
+
+// ═══ VISITAS ═══
+var viEId=null;
+function viBairro(v){ var b=String(v.bairro||'').trim(); return b? bairroKey(b) : ''; }
+function fillViFilters(){
+  var fv=G('vi-fv'), cv=fv.value;
+  fv.innerHTML='<option value="">Todos vendedores</option>'+sortAlpha(gAux('vendedores').filter(function(a){return a.active || (db.visitas||[]).some(function(x){return x.vendId===a.id;});})).map(function(a){return '<option value="'+a.id+'">'+escA(a.name)+'</option>';}).join('');
+  fv.value=cv;
+  var fb=G('vi-fb'), cb=fb.value, set={};
+  (db.visitas||[]).forEach(function(v){ var b=viBairro(v); if(b) set[b]=1; });
+  fb.innerHTML='<option value="">Todos bairros</option>'+Object.keys(set).sort(function(a,b){return normTxt(a).localeCompare(normTxt(b),'pt-BR');}).map(function(b){return '<option value="'+escA(b)+'">'+escA(b)+'</option>';}).join('');
+  fb.value=cb;
+}
+function renderVisitas(){
+  var pr=pRange('vi'), from=pr.from, to=pr.to;
+  var fv=G('vi-fv').value, fb=G('vi-fb').value, fl=G('vi-fl').value;
+  var q=normTxt(G('vi-q').value).split(' ').filter(Boolean);
+  var rows=(db.visitas||[]).filter(function(v){
+    if((from||to) && !inRange(v.data,from,to)) return false;
+    if(fv && v.vendId!==fv) return false;
+    if(fb && viBairro(v)!==fb) return false;
+    if(fl && v.local!==fl) return false;
+    if(q.length){
+      var txt=normTxt([v.nome, v.bairro, viBairro(v), auxN('vendedores',v.vendId), VI_LOCAL[v.local]||'', v.origId?auxN('origens',v.origId):'', fmtD(v.data), v.obs].join(' '));
+      if(!q.every(function(t){return txt.indexOf(t)>=0;})) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return (a.data||'')<(b.data||'')?-1:(a.data||'')>(b.data||'')?1:normTxt(a.nome).localeCompare(normTxt(b.nome),'pt-BR'); });
+  var c={CASA:0,LOJA:0,AMBOS:0}; rows.forEach(function(v){ if(c[v.local]!==undefined) c[v.local]++; });
+  G('vi-kpis').innerHTML='<div class="kc ca"><div class="kl">Visitas</div><div class="kv">'+rows.length+'</div></div>'
+    +'<div class="kc"><div class="kl">Casa do cliente</div><div class="kv">'+c.CASA+'</div></div>'
+    +'<div class="kc"><div class="kl">Loja</div><div class="kv">'+c.LOJA+'</div></div>'
+    +'<div class="kc"><div class="kl">Cliente e loja</div><div class="kv">'+c.AMBOS+'</div></div>';
+  var tb=G('vi-tb');
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="8" class="te">Nenhuma visita no período</td></tr>'; return; }
+  tb.innerHTML=rows.map(function(v){
+    return '<tr><td>'+fmtD(v.data)+'</td><td style="font-weight:500">'+escA(v.nome)+'</td><td>'+escA(viBairro(v)||'-')+'</td>'
+      +'<td><span class="badge bz">'+(VI_LOCAL[v.local]||'-')+'</span></td><td>'+escA(v.vendId?auxN('vendedores',v.vendId):'-')+'</td>'
+      +'<td>'+escA(v.origId?auxN('origens',v.origId):'-')+'</td><td style="font-size:12px;color:var(--tx2)">'+escA(v.obs||'')+'</td>'
+      +'<td><div style="display:flex;gap:3px"><button class="btn bsm bs vi-edit-btn" data-id="'+v.id+'">Editar</button><button class="btn bsm bd2 vi-del-btn" data-id="'+v.id+'">X</button></div></td></tr>';
+  }).join('');
+}
+function openViModal(id){
+  viEId=id||null;
+  var v=id?(db.visitas||[]).find(function(x){return x.id===id;}):null;
+  var vs=sortAlpha(gAux('vendedores').filter(function(a){return a.active || (v&&a.id===v.vendId);}));
+  G('vi-vend').innerHTML='<option value="">— selecione —</option>'+vs.map(function(a){return '<option value="'+a.id+'">'+escA(a.name)+'</option>';}).join('');
+  var os=sortAlpha(gAux('origens').filter(function(a){return a.active || (v&&a.id===v.origId);}));
+  G('vi-orig').innerHTML='<option value="">— não informado —</option>'+os.map(function(a){return '<option value="'+a.id+'">'+escA(a.name)+'</option>';}).join('');
+  G('m-visita-t').textContent=v?'Editar Visita':'Nova Visita';
+  G('vi-nome').value=v?v.nome:''; G('vi-data').value=v?v.data:today(); G('vi-bairro').value=v?(v.bairro||''):'';
+  G('vi-local').value=v?(v.local||''):''; G('vi-vend').value=v?(v.vendId||''):''; G('vi-orig').value=v?(v.origId||''):''; G('vi-obs').value=v?(v.obs||''):'';
+  initComboFree('vi-bairro','bairros');
+  openModal('m-visita');
+  setTimeout(function(){ G('vi-nome').focus(); },50);
+}
+function saveVisita(){
+  var d={ nome:G('vi-nome').value.trim(), data:G('vi-data').value, bairro:G('vi-bairro').value.trim(), local:G('vi-local').value, vendId:G('vi-vend').value, origId:G('vi-orig').value, obs:G('vi-obs').value.trim() };
+  if(!d.nome){showToast('Informe o nome do cliente');return;}
+  if(!d.data){showToast('Informe a data da visita');return;}
+  if(!d.local){showToast('Escolha o local da visita');return;}
+  if(!d.vendId){showToast('Selecione o vendedor');return;}
+  if(d.bairro){ var cad=gAux('bairros').find(function(b){return normTxt(b.name)===normTxt(d.bairro);}); if(cad) d.bairro=cad.name; }
+  if(!db.visitas) db.visitas=[];
+  if(viEId){ var i=db.visitas.findIndex(function(x){return x.id===viEId;}); if(i>=0) db.visitas[i]=Object.assign({},db.visitas[i],d); }
+  else db.visitas.push(Object.assign({id:uid()},d));
+  sdb(); closeModal('m-visita'); fillViFilters(); renderVisitas(); showToast('Visita salva!');
+}
+
+// ═══ FUNIL (Análise de Vendas) ═══
+var anaFV='', anaFO='';
+function fnRatio(a,b,dec){ return b? (a/b).toLocaleString('pt-BR',{minimumFractionDigits:dec,maximumFractionDigits:dec}) : '-'; }
+function fnPct(a,b){ return b? Math.round(a/b*100)+'%' : '-'; }
+function funilData(from,to,fv,fo){
+  var L={},V={},S={},LO={},VO={},SO={},tl=0,tv=0,ts=0;
+  Object.keys(db.leads||{}).forEach(function(m){
+    var ms=m+'-01', me=ldMonthAdd(m,1)+'-01';
+    if(to && ms>to) return; if(from && me<=from) return;
+    var d=db.leads[m]||{};
+    Object.keys(d).forEach(function(v){ if(fv && v!==fv) return;
+      Object.keys(d[v]||{}).forEach(function(o){ if(fo && o!==fo) return; var n=parseInt(d[v][o])||0; if(!n) return;
+        L[v]=(L[v]||0)+n; LO[o]=(LO[o]||0)+n; tl+=n; }); });
+  });
+  (db.visitas||[]).forEach(function(x){
+    if((from||to) && !inRange(x.data,from,to)) return;
+    if(fv && x.vendId!==fv) return; if(fo && x.origId!==fo) return;
+    var v=x.vendId||'', o=x.origId||''; V[v]=(V[v]||0)+1; VO[o]=(VO[o]||0)+1; tv++;
+  });
+  (db.clients||[]).forEach(function(c){
+    var d=cliSaleDate(c); if((from||to) && !inRange(d,from,to)) return;
+    if(fv && c.vendId!==fv) return; if(fo && c.origId!==fo) return;
+    var v=c.vendId||'', o=c.origId||''; S[v]=(S[v]||0)+1; SO[o]=(SO[o]||0)+1; ts++;
+  });
+  return {L:L,V:V,S:S,LO:LO,VO:VO,SO:SO,tl:tl,tv:tv,ts:ts};
+}
+function funilHtml(from,to,partial){
+  var vs=sortAlpha(gAux('vendedores').filter(function(a){return a.active;}));
+  var os=sortAlpha(gAux('origens').filter(function(a){return a.active;}));
+  var d=funilData(from,to,anaFV,anaFO);
+  var opt=function(list,cur,lbl){ return '<option value="">'+lbl+'</option>'+list.map(function(a){return '<option value="'+a.id+'"'+(a.id===cur?' selected':'')+'>'+escA(a.name)+'</option>';}).join(''); };
+  var k=function(l,v,h){ return '<div class="fn-k"><div class="l">'+l+'</div><div class="v">'+v+'</div>'+(h?'<div class="h">'+h+'</div>':'')+'</div>'; };
+  var h='<div class="card" style="margin-bottom:14px"><div class="ch" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+    +'<span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Leads · Visitas · Vendas</span>'
+    +'<span style="display:flex;gap:6px;flex-wrap:wrap"><select id="ana-fv" class="fl" style="width:auto">'+opt(vs,anaFV,'Todos vendedores')+'</select>'
+    +'<select id="ana-fo" class="fl" style="width:auto">'+opt(os,anaFO,'Todas origens')+'</select></span></div><div style="padding:14px">'
+    +'<div class="fn-grid">'
+    +k('Leads',d.tl,'')+k('Visitas',d.tv,'')+k('Vendas',d.ts,'')
+    +k('Vendas por visita',fnPct(d.ts,d.tv),d.tv?d.ts+' venda(s) em '+d.tv+' visita(s)':'sem visitas')
+    +k('Leads por visita',fnRatio(d.tl,d.tv,1),d.tv?'Visitas/lead: '+fnPct(d.tv,d.tl):'sem visitas')
+    +k('Leads por venda',fnRatio(d.tl,d.ts,1),d.ts?'Conversão lead→venda: '+fnPct(d.ts,d.tl):'sem vendas')
+    +'</div>';
+  var tbl=function(title,list,LM,VM,SM,nil){
+    var ids=list.map(function(a){return a.id;});
+    Object.keys(LM).concat(Object.keys(VM),Object.keys(SM)).forEach(function(i){ if(ids.indexOf(i)<0) ids.push(i); });
+    var rows=ids.map(function(i){ var l=LM[i]||0,v=VM[i]||0,s=SM[i]||0; if(!l&&!v&&!s) return '';
+      var nm=i?(list.find(function(a){return a.id===i;})||{}).name||auxN(nil[1],i):nil[0];
+      return '<tr><td style="font-weight:500">'+escA(nm)+'</td><td>'+l+'</td><td>'+v+'</td><td>'+s+'</td><td>'+fnPct(s,v)+'</td><td>'+fnRatio(l,v,1)+'</td><td>'+fnRatio(l,s,1)+'</td></tr>'; }).join('');
+    if(!rows) rows='<tr><td colspan="7" class="te">Sem dados</td></tr>';
+    return '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx2);margin:6px 0">'+title+'</div>'
+      +'<div class="tw"><table><thead><tr><th>'+title.replace('Por ','')+'</th><th>Leads</th><th>Visitas</th><th>Vendas</th><th>Vendas/Visita</th><th>Leads/Visita</th><th>Leads/Venda</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  };
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">'
+    +'<div>'+tbl('Por Vendedor',vs,d.L,d.V,d.S,['Sem vendedor','vendedores'])+'</div>'
+    +'<div>'+tbl('Por Origem',os,d.LO,d.VO,d.SO,['Origem não informada','origens'])+'</div></div>';
+  if(partial) h+='<div style="font-size:11px;color:var(--tx3);margin-top:8px">Leads são lançados por mês: no período escolhido entram os meses inteiros que tocam o período.</div>';
+  h+='</div></div>';
+  return h;
+}
 function initAna() { G('ana-m').value=curM(); renderMetCards(); renderAna(); }
 function renderMetCards() {
   G('met-cards').innerHTML=METS.map(function(m){
@@ -3611,6 +3885,8 @@ function renderAna() {
     return inRange(refDate,from,to);
   });
   var lbl=pLabel('ana'), active=Array.from(anaActive);
+  var anaT=G('ana-pt').value;
+  G('ana-funil').innerHTML=funilHtml(from,to,(anaT==='week'||anaT==='custom'));
   if(!filtered.length){G('ana-results').innerHTML='<div style="text-align:center;padding:36px;color:var(--tx2)">Nenhuma venda em: <strong>'+lbl+'</strong></div>';return;}
   if(!active.length){G('ana-results').innerHTML='<div style="text-align:center;padding:24px;color:var(--tx2)">Selecione pelo menos uma metrica.</div>'+anaVendasHtml(filtered);return;}
   var tV=filtered.reduce(function(s,c){return s+(parseFloat(c.valor)||0);},0);
@@ -4467,7 +4743,7 @@ function renderResCliente() {
 // ═══ INIT — ALL EVENT LISTENERS HERE ═══
 document.addEventListener('DOMContentLoaded', function() {
   // NAV MENU
-  ['dashboard','metas','analytics','clientes','recebimentos','manutencao','desp-venda','desp-op','outras-rec','fluxo','dre','saldo','res-cliente','cadastros','comissoes','comiss-mes'].forEach(function(p) {
+  ['dashboard','metas','analytics','leads','visitas','clientes','recebimentos','manutencao','desp-venda','desp-op','outras-rec','fluxo','dre','saldo','res-cliente','cadastros','comissoes','comiss-mes'].forEach(function(p) {
     var el = G('nav-'+p);
     if (el) el.addEventListener('click', function() { go(p); G('sb').classList.remove('open'); G('sb-bk').classList.remove('open'); });
   });
@@ -4888,6 +5164,32 @@ document.addEventListener('DOMContentLoaded', function() {
   G('or-apply-btn').addEventListener('click', renderOutrasRec);
   G('or-fs').addEventListener('change', renderOutrasRec);
   G('or-q').addEventListener('input', renderOutrasRec);
+  // LEADS
+  G('ld-m').addEventListener('change', renderLeads);
+  G('ld-prev').addEventListener('click', function(){ G('ld-m').value=ldMonthAdd(G('ld-m').value||curM(),-1); renderLeads(); });
+  G('ld-next').addEventListener('click', function(){ G('ld-m').value=ldMonthAdd(G('ld-m').value||curM(),1); renderLeads(); });
+  G('ld-tb').addEventListener('input', function(e){ if(e.target.classList.contains('ld-in')) ldOnInput(e.target); });
+  G('ld-tb').addEventListener('focusin', function(e){ if(e.target.classList.contains('ld-in')) e.target.select(); });
+  // VISITAS
+  G('vi-pt').addEventListener('change', function(){ pSetup('vi'); renderVisitas(); });
+  ['vi-m','vi-ws','vi-f','vi-t','vi-fv','vi-fb','vi-fl'].forEach(function(id){ G(id).addEventListener('change', renderVisitas); });
+  G('vi-q').addEventListener('input', renderVisitas);
+  G('btn-nova-visita').addEventListener('click', function(){ openViModal(null); });
+  G('m-visita-close').addEventListener('click', function(){ closeModal('m-visita'); });
+  G('m-visita-cancel').addEventListener('click', function(){ closeModal('m-visita'); });
+  G('m-visita-save').addEventListener('click', saveVisita);
+  G('m-visita').addEventListener('click', function(e){ if(e.target===G('m-visita')) closeModal('m-visita'); });
+  G('vi-tb').addEventListener('click', function(e){
+    var eb=e.target.closest('.vi-edit-btn'); if(eb){ openViModal(eb.getAttribute('data-id')); return; }
+    var dl=e.target.closest('.vi-del-btn');
+    if(dl){ var id=dl.getAttribute('data-id'), v=(db.visitas||[]).find(function(x){return x.id===id;}); if(!v) return;
+      confirm2('Excluir visita','Excluir a visita de '+escA(v.nome)+' em '+fmtD(v.data)+'?',function(){ db.visitas=db.visitas.filter(function(x){return x.id!==id;}); sdb(); fillViFilters(); renderVisitas(); showToast('Excluida'); }); }
+  });
+  // FUNIL (Análise)
+  G('ana-funil').addEventListener('change', function(e){
+    if(e.target.id==='ana-fv'){ anaFV=e.target.value; renderAna(); }
+    else if(e.target.id==='ana-fo'){ anaFO=e.target.value; renderAna(); }
+  });
   G('btn-nova-outrec').addEventListener('click', function(){openOrModal(null);});
   G('m-outrec-close').addEventListener('click', function(){closeModal('m-outrec');});
   G('m-outrec-cancel').addEventListener('click', function(){closeModal('m-outrec');});
