@@ -119,6 +119,17 @@ textarea{resize:vertical;min-height:64px}
 .ti{padding:8px 14px;font-size:13px;font-weight:500;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap}
 .ti:hover{color:var(--tx)} .ti.active{color:var(--ac);border-bottom-color:var(--ac)}
 .tp{display:none} .tp.active{display:block}
+.nf-sec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--bd)}
+.nf-ptab input,.nf-ptab select{padding:5px 6px;font-size:13px}
+.nfi{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px;border:1px solid var(--bd);border-radius:8px;margin-bottom:6px;background:var(--sf2)}
+.nfi select{width:auto;padding:6px}
+.nfi .nfi-ref{flex:1 1 280px;min-width:200px;position:relative}
+.nfi .nfi-ref input{width:100%}
+.nfi .nfi-v{width:120px}
+.nfi .nfi-info{flex-basis:100%;font-size:11px;color:var(--tx2);padding-left:2px}
+.nfi .combo-drop{max-height:260px}
+.nf-sum{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;padding:10px 12px;border-radius:8px;background:var(--sf2)}
+.nf-badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:8px;background:#E8EEF7;color:#1B4F8A;margin-left:4px;white-space:nowrap}
 .ld-table input{width:64px;padding:5px 6px;text-align:center;border:1px solid var(--bd);border-radius:6px;background:var(--sf,#fff);font:inherit}
 .ld-table td,.ld-table th{text-align:center}
 .ld-table td:first-child,.ld-table th:first-child{text-align:left;white-space:nowrap}
@@ -261,6 +272,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
   <div class="ni" id="nav-recebimentos"><span class="nic">&#128176;</span> Recebimentos</div>
   <div class="ni" id="nav-desp-venda"><span class="nic">&#129534;</span> Desp. de Vendas</div>
   <div class="ni" id="nav-desp-op"><span class="nic">&#127970;</span> Desp. Operacionais</div>
+  <div class="ni" id="nav-nfs"><span class="nic">&#129534;</span> NFs de Fornecedor</div>
   <div class="ni" id="nav-fluxo"><span class="nic">&#128200;</span> Fluxo de Caixa</div>
   <div class="ni" id="nav-dre"><span class="nic">&#128203;</span> DRE</div>
   <div class="ni" id="nav-comiss-mes"><span class="nic">&#129689;</span> Comissões</div>
@@ -274,7 +286,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 27/10/2026 · 09:30</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 27/10/2026 · 10:30</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -605,6 +617,33 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
     <div class="card"><div class="tw"><table>
       <thead><tr><th>Cliente</th><th>Categoria</th><th>Descricao</th><th>Valor</th><th>Data prevista</th><th>Status</th><th>Data efetiva</th><th></th></tr></thead>
       <tbody id="dv-tb"></tbody>
+    </table></div></div>
+  </div>
+</div>
+
+<div class="page" id="p-nfs">
+  <div class="ph"><div><div class="pt">NFs de Fornecedor</div><div class="ps">Uma nota pode pagar várias despesas (de clientes diferentes, operacionais) e compras para estoque</div></div><button class="btn bp" id="btn-nova-nf">+ Nova NF</button></div>
+  <div class="pb" style="padding-bottom:0;padding-top:14px">
+    <div class="pbar">
+      <div class="pbar-lbl">Periodo (vencimento das parcelas)</div>
+      <div class="pbar-row">
+        <div class="fg" style="flex:0 0 auto"><label>Tipo</label>
+          <select id="nf-pt" class="fl" style="width:auto;min-width:140px"><option value="all">Todo o periodo</option><option value="month">Mes</option><option value="custom">Periodo</option></select></div>
+        <div class="fg" id="nf-mw" style="display:none;flex:0 0 auto"><label>Mes</label><input type="month" id="nf-m" class="fl" style="width:auto"></div>
+        <div class="fg" id="nf-fw" style="display:none;flex:0 0 auto"><label>De</label><input type="date" id="nf-f" class="fl" style="width:auto"></div>
+        <div class="fg" id="nf-tw" style="display:none;flex:0 0 auto"><label>Ate</label><input type="date" id="nf-t" class="fl" style="width:auto"></div>
+      </div>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="sb2">
+      <input type="search" class="fl" id="nf-q" placeholder="Buscar NF, fornecedor, cliente, item, valor, data…" style="flex:1;min-width:200px">
+      <select class="fl" id="nf-fs" style="width:auto"><option value="">Todas</option><option value="aberta">Em aberto</option><option value="paga">Pagas</option><option value="dif">Com valor não alocado</option></select>
+    </div>
+    <div class="kg" id="nf-kpis"></div>
+    <div class="card"><div class="tw"><table>
+      <thead><tr><th>Emissão</th><th>NF</th><th>Fornecedor</th><th>Valor</th><th>Parcelas</th><th>Alocação</th><th>Status</th><th></th></tr></thead>
+      <tbody id="nf-tb"></tbody>
     </table></div></div>
   </div>
 </div>
@@ -1169,6 +1208,41 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
   </div>
 </div>
 </div>
+<div id="m-nf" class="mov">
+<div class="modal" style="max-width:900px">
+  <div class="mh"><div class="mt2" id="m-nf-t">Nova NF de Fornecedor</div><button class="mx" id="m-nf-close">&#10005;</button></div>
+  <div class="mb">
+    <div class="fg3">
+      <div class="fg s2"><label>Fornecedor *</label><input id="nf-forn" type="text" list="nf-forn-list" autocomplete="off"><datalist id="nf-forn-list"></datalist></div>
+      <div class="fg"><label>Número da NF *</label><input id="nf-num" type="text" autocomplete="off"></div>
+      <div class="fg"><label>Data de emissão</label><input id="nf-emi" type="date"></div>
+      <div class="fg"><label>Valor total da NF (R$) *</label><input id="nf-val" type="number" min="0" step="0.01"></div>
+      <div class="fg"><label>Observações</label><input id="nf-obs" type="text"></div>
+    </div>
+    <div class="nf-sec">Pagamento (parcelas)</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px">
+      <div class="fg" style="flex:0 0 auto"><label>Nº de parcelas</label><input id="nf-np" type="number" min="1" max="48" step="1" value="1" style="width:80px"></div>
+      <div class="fg" style="flex:0 0 auto"><label>1º vencimento</label><input id="nf-v1" type="date"></div>
+      <div class="fg" style="flex:0 0 auto"><label>Intervalo (dias)</label><input id="nf-int" type="number" min="1" step="1" value="30" style="width:80px"></div>
+      <button class="btn bs bsm" id="nf-gerar" type="button">Gerar parcelas</button>
+    </div>
+    <div class="tw"><table class="nf-ptab"><thead><tr><th>#</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Data pagamento</th></tr></thead><tbody id="nf-parc"></tbody></table></div>
+    <div id="nf-parc-info" style="font-size:12px;margin:4px 0 10px"></div>
+    <div class="nf-sec">O que esta NF paga</div>
+    <div id="nf-items"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">
+      <button class="btn bs bsm" type="button" id="nf-add-cli">+ Despesa de cliente</button>
+      <button class="btn bs bsm" type="button" id="nf-add-op">+ Despesa operacional</button>
+      <button class="btn bs bsm" type="button" id="nf-add-est">+ Estoque</button>
+    </div>
+    <div id="nf-sum" class="nf-sum"></div>
+  </div>
+  <div class="mf">
+    <button class="btn bs" id="m-nf-cancel">Cancelar</button>
+    <button class="btn bp" id="m-nf-save">Salvar NF</button>
+  </div>
+</div>
+</div>
 <div id="m-visita" class="mov">
 <div class="modal" style="max-width:520px">
   <div class="mh"><div class="mt2" id="m-visita-t">Nova Visita</div><button class="mx" id="m-visita-close">&#10005;</button></div>
@@ -1227,6 +1301,7 @@ function initDB() {
 }
 var _appReady = false, _comSync = false;
 function sdb() {
+  try { nfSyncAll(); } catch (err) { console.error('nfs', err); }
   if (_appReady && !_comSync) { _comSync = true; try { syncComissoes(); } catch (err) { console.error('comissoes', err); } _comSync = false; }
   localStorage.setItem(DBK, JSON.stringify(db));
   if (typeof cloudOnSave === 'function') cloudOnSave();
@@ -1236,6 +1311,7 @@ if (!db.manut) db.manut = [];
 if (!db.outrasRec) db.outrasRec = [];
 if (!db.visitas) db.visitas = [];
 if (!db.leads) db.leads = {};
+if (!db.nfs) db.nfs = [];
 if (!db.aux) db.aux = {};
 if (!db.aux.bairros) db.aux.bairros = [];
 if (!db.aux.catOutrasRec) db.aux.catOutrasRec = [];
@@ -1259,6 +1335,12 @@ if (!db.aux.itensDespesa) db.aux.itensDespesa = [];
 (function fixDescModelo(){
   var ch=false;
   (db.clients||[]).forEach(function(c){ (c.expenses||[]).forEach(function(e){ if (String(e.itemId||'').indexOf('mod:')===0 && /^Modelo /.test(e.desc||'')) { e.desc=e.desc.replace(/^Modelo /,''); ch=true; } }); });
+  if (ch) { localStorage.setItem(DBK, JSON.stringify(db)); localStorage.setItem('agp2_dirty','1'); }
+})();
+(function expIds(){
+  var ch=false;
+  (db.clients||[]).forEach(function(c){ (c.expenses||[]).forEach(function(e){ if(!e.id){ e.id=Date.now().toString(36)+Math.random().toString(36).slice(2,8); ch=true; } }); });
+  (db.opExp||[]).forEach(function(e){ if(!e.id){ e.id=Date.now().toString(36)+Math.random().toString(36).slice(2,8); ch=true; } });
   if (ch) { localStorage.setItem(DBK, JSON.stringify(db)); localStorage.setItem('agp2_dirty','1'); }
 })();
 (function seedCatModelo(){
@@ -1641,6 +1723,7 @@ function importDB(input) {
           if (!db.outrasRec) db.outrasRec = [];
           if (!db.visitas) db.visitas = [];
           if (!db.leads) db.leads = {};
+          if (!db.nfs) db.nfs = [];
           if (!db.caixas) db.caixas = [];
           if (typeof CLOUD !== 'undefined' && CLOUD && cloudReady) {
             showToast('Enviando dados para a nuvem…');
@@ -1729,6 +1812,7 @@ function go(p) {
   else if (p==='recebimentos') { pSetup('rec'); renderRec(); }
   else if (p==='desp-venda') { pSetup('dv'); renderDV(); }
   else if (p==='desp-op') { fillOpFilters(); pSetup('op'); renderOp(); }
+  else if (p==='nfs') { if(!G('nf-m').value) G('nf-m').value=curM(); pSetup('nf'); renderNfs(); }
   else if (p==='fluxo') { if(G('fl-m'))G('fl-m').value = curM(); renderFluxo(); }
   else if (p==='dre') { G('dre-mes').value = curM(); renderDRE(); }
   else if (p==='manutencao') { renderManut(); updateManutBadge(); }
@@ -2489,6 +2573,7 @@ function renderExpRows() {
       + (isModeloCat(e.catId) ? '<span class="er-ent"><label>Entregue</label><select data-ei="'+i+'" data-field="entregue" style="width:auto"><option value=""'+(e.entregue!=='S'?' selected':'')+'>Não</option><option value="S"'+(e.entregue==='S'?' selected':'')+'>Sim</option></select>'
           + '<label>Data entrega</label><input type="date" data-ei="'+i+'" data-field="dtEntrega" value="'+(e.dtEntrega||'')+'" style="width:auto"></span>' : '')
       + '<span class="er-ef"><label>Data efetiva</label><input type="date" data-ei="'+i+'" data-field="def" value="'+(e.def||'')+'" style="width:auto"></span>'
+      + (e.nfLink ? '<span class="er-nf" style="font-size:11px;color:#1B4F8A">'+nfBadge(e)+(e.nfFull?' valor e pagamento controlados pela NF':' NF cobre '+fmtM(e.nfCov))+'</span>' : '')
       + '<span class="er-total">= <b id="er-tot-'+i+'">'+fmtM(r2((parseFloat(e.qtd)||0)*(parseFloat(e.unit)||0)))+'</b></span>'
       + '</div></div>';
   });
@@ -2912,12 +2997,12 @@ function renderDV() {
     if(fcat&&e.catId!==fcat)return;
     var eDate = e.data || c.dvenda || '';
     if(!noFilterDV && !inRange(eDate,from,to))return;
-    all.push({v:parseFloat(e.valor)||0,catId:e.catId,desc:e.desc,data:eDate,def:e.def,status:e.status,cn:c.nome,cid:c.id,idx:i});
+    all.push({v:parseFloat(e.valor)||0,catId:e.catId,desc:e.desc,data:eDate,def:e.def,status:e.status,cn:c.nome,cid:c.id,idx:i,ex:e});
   });});
   var dq=normTxt((G('dv-q')||{value:''}).value).split(' ').filter(Boolean);
   if (dq.length) all = all.filter(function(e){
     var st={PREVISTO:'previsto',LANCADO:'lancado',REALIZADO:'realizado'}[e.status]||'';
-    var txt=normTxt([e.cn, auxN('catDespesas',e.catId), e.desc, st, fmtM(e.v), String(e.v), fmtD(e.data), fmtD(e.def)].join(' '));
+    var txt=normTxt([e.cn, auxN('catDespesas',e.catId), e.desc, st, fmtM(e.v), String(e.v), fmtD(e.data), fmtD(e.def), e.ex&&e.ex.nfNums?'nf '+e.ex.nfNums:''].join(' '));
     return dq.every(function(t){ return txt.indexOf(t)>=0; });
   });
   all.sort(function(a,b){ return cmpOrd(dOrd(a.status==='REALIZADO',a.def,a.data), dOrd(b.status==='REALIZADO',b.def,b.data), a.cn, b.cn); });
@@ -2928,11 +3013,11 @@ function renderDV() {
   if(!all.length){tb.innerHTML='<tr><td colspan="8" class="te">Nenhuma</td></tr>';return;}
   tb.innerHTML=all.map(function(e){
     return '<tr><td style="font-weight:500">'+e.cn+'</td><td>'+auxN('catDespesas',e.catId)+'</td>'
-      +'<td style="color:var(--tx2)">'+(e.desc||'-')+'</td><td><span class="money neg">'+fmtM(e.v)+'</span></td>'
+      +'<td style="color:var(--tx2)">'+(e.desc||'-')+nfBadge(e.ex)+'</td><td><span class="money neg">'+fmtM(e.v)+'</span></td>'
       +'<td>'+fmtD(e.data)+'</td><td>'+bdg(e.status)+'</td><td>'+fmtD(e.def)+'</td>'
       +'<td><div style="display:flex;gap:4px">'
         +'<button class="btn bsm bs dv-edit-btn" data-cid="'+e.cid+'" data-idx="'+e.idx+'">Editar</button>'
-        +(e.status!=='REALIZADO'?'<button class="btn bsm bok dv-ok-btn" data-cid="'+e.cid+'" data-idx="'+e.idx+'">OK</button>':'')
+        +(e.status!=='REALIZADO'&&!(e.ex&&e.ex.nfFull)?'<button class="btn bsm bok dv-ok-btn" data-cid="'+e.cid+'" data-idx="'+e.idx+'">OK</button>':'')
       +'</div></td></tr>';
   }).join('');
 }
@@ -3022,7 +3107,7 @@ function renderOp() {
     if(!noFilterOp && !inRange(e.venc,from,to))return false;
     if(oq.length){
       var st={PREVISTO:'previsto',LANCADO:'lancado',REALIZADO:'realizado'}[e.status]||'';
-      var txt=normTxt([auxN('centrosCusto',e.ccId), auxN('catOp',e.catId), e.desc, e.nf, st, fmtM(e.valor), String(e.valor), fmtD(e.venc), fmtD(e.def)].join(' '));
+      var txt=normTxt([auxN('centrosCusto',e.ccId), auxN('catOp',e.catId), e.desc, e.nf, e.nfNums?'nf '+e.nfNums:'', st, fmtM(e.valor), String(e.valor), fmtD(e.venc), fmtD(e.def)].join(' '));
       if(!oq.every(function(t){ return txt.indexOf(t)>=0; })) return false;
     }
     return true;
@@ -3035,12 +3120,12 @@ function renderOp() {
   if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="te">Nenhuma despesa</td></tr>';return;}
   tb.innerHTML=rows.map(function(e){
     return '<tr><td>'+auxN('centrosCusto',e.ccId)+'</td><td>'+auxN('catOp',e.catId)+'</td>'
-      +'<td style="color:var(--tx2)">'+(e.desc||'-')+'</td><td style="font-size:12px">'+(e.nf?escA(e.nf):'<span style="color:var(--tx3)">—</span>')+'</td><td><span class="money neg">'+fmtM(e.valor)+'</span></td>'
+      +'<td style="color:var(--tx2)">'+(e.desc||'-')+nfBadge(e)+'</td><td style="font-size:12px">'+(e.nf?escA(e.nf):'<span style="color:var(--tx3)">—</span>')+'</td><td><span class="money neg">'+fmtM(e.valor)+'</span></td>'
       +'<td>'+fmtD(e.venc)+(e.lim?'<div style="font-size:10px;color:var(--tx3)">ate '+fmtD(e.lim)+'</div>':'')+'</td>'
       +'<td><span class="badge bz">'+(rMap[e.rec]||'-')+'</span></td><td>'+bdg(e.status)+'</td>'
       +'<td><div style="display:flex;gap:3px">'
         +'<button class="btn bsm bs op-edit-btn" data-id="'+e.id+'">Editar</button>'
-        +(e.status!=='REALIZADO'?'<button class="btn bsm bok op-ok-btn" data-id="'+e.id+'">OK</button>':'')
+        +(e.status!=='REALIZADO'&&!e.nfFull?'<button class="btn bsm bok op-ok-btn" data-id="'+e.id+'">OK</button>':'')
         +'<button class="btn bsm bd2 op-del-btn" data-id="'+e.id+'">X</button>'
       +'</div></td></tr>';
   }).join('');
@@ -3075,13 +3160,14 @@ function renderFluxo() {
   // ── Saídas do período (todos os status) ──
   var sai=[];
   db.clients.forEach(function(c){
-    (c.expenses||[]).forEach(function(e){
+    cashCliExp(c).forEach(function(e){
       var eDate = e.data || c.dvenda || '';
       if(inRange(eDate,from,to))
         sai.push({v:parseFloat(e.valor)||0,cn:c.nome,desc:e.desc||auxN('catDespesas',e.catId),cliente:c.nome,sub:e.desc||auxN('catDespesas',e.catId),data:eDate,status:e.status});
     });
   });
-  db.opExp.filter(function(e){return e.venc&&inRange(e.venc,from,to);}).forEach(function(e){
+  cashOpExp().filter(function(e){return e.venc&&inRange(e.venc,from,to);}).forEach(function(e){
+    if(e._nf){ sai.push({v:parseFloat(e.valor)||0,cn:'🧾 '+e.desc,desc:e.desc,cliente:null,sub:e._nfAlloc||'',data:e.venc,status:e.status}); return; }
     var cat=auxN('catOp',e.catId); var cc=auxN('centrosCusto',e.ccId);
     sai.push({v:parseFloat(e.valor)||0,cn:cat+(cc?' / '+cc:''),desc:e.desc||cat,cliente:null,sub:e.desc||'',data:e.venc,status:e.status});
   });
@@ -3099,12 +3185,12 @@ function renderFluxo() {
       var rDate = r.venc || c.dvenda || '';
       if(rDate && rDate<=accumTo) tR+=parseFloat(r.valor)||0;
     });
-    (c.expenses||[]).forEach(function(e){
+    cashCliExp(c).forEach(function(e){
       var eDate = e.data || c.dvenda || '';
       if(eDate && eDate<=accumTo) tS+=parseFloat(e.valor)||0;
     });
   });
-  db.opExp.filter(function(e){return e.venc&&e.venc<=accumTo;}).forEach(function(e){tS+=parseFloat(e.valor)||0;});
+  cashOpExp().filter(function(e){return e.venc&&e.venc<=accumTo;}).forEach(function(e){tS+=parseFloat(e.valor)||0;});
   manutAllParcelas().forEach(function(p){if(p.venc&&p.venc<=accumTo)tR+=p.v;});
   orRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d&&d<=accumTo)tR+=parseFloat(r.valor)||0;});
   var sA = tR - tS;
@@ -3136,9 +3222,9 @@ function renderFluxo() {
       var allDates=[];
       db.clients.forEach(function(c){
         cliRecs(c).forEach(function(r){if(r.venc)allDates.push(r.venc);});
-        (c.expenses||[]).forEach(function(e){if(e.data)allDates.push(e.data);});
+        cashCliExp(c).forEach(function(e){if(e.data)allDates.push(e.data);});
       });
-      db.opExp.forEach(function(e){if(e.venc)allDates.push(e.venc);});
+      cashOpExp().forEach(function(e){if(e.venc)allDates.push(e.venc);});
       manutAllParcelas().forEach(function(p){if(p.venc)allDates.push(p.venc);});
       orRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d)allDates.push(d);});
       allDates.sort();
@@ -3156,9 +3242,9 @@ function renderFluxo() {
   var cum=0;
   db.clients.forEach(function(c){
     cliRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)<cmr.mFrom)cum+=parseFloat(r.valor)||0;});
-    (c.expenses||[]).forEach(function(ex){var ed=ex.data||c.dvenda||'';if(ed&&ed.slice(0,7)<cmr.mFrom)cum-=parseFloat(ex.valor)||0;});
+    cashCliExp(c).forEach(function(ex){var ed=ex.data||c.dvenda||'';if(ed&&ed.slice(0,7)<cmr.mFrom)cum-=parseFloat(ex.valor)||0;});
   });
-  db.opExp.filter(function(x){return x.venc&&x.venc.slice(0,7)<cmr.mFrom;}).forEach(function(x){cum-=parseFloat(x.valor)||0;});
+  cashOpExp().filter(function(x){return x.venc&&x.venc.slice(0,7)<cmr.mFrom;}).forEach(function(x){cum-=parseFloat(x.valor)||0;});
   manutAllParcelas().filter(function(p){return p.venc&&p.venc.slice(0,7)<cmr.mFrom;}).forEach(function(p){cum+=p.v;});
   orRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.slice(0,7)<cmr.mFrom;}).forEach(function(r){cum+=parseFloat(r.valor)||0;});
 
@@ -3169,9 +3255,9 @@ function renderFluxo() {
     var e3=0,s3=0;
     db.clients.forEach(function(c){
       cliRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)===ms)e3+=parseFloat(r.valor)||0;});
-      (c.expenses||[]).forEach(function(ex){var ed=ex.data||c.dvenda||'';if(ed&&ed.slice(0,7)===ms)s3+=parseFloat(ex.valor)||0;});
+      cashCliExp(c).forEach(function(ex){var ed=ex.data||c.dvenda||'';if(ed&&ed.slice(0,7)===ms)s3+=parseFloat(ex.valor)||0;});
     });
-    db.opExp.filter(function(x){return x.venc&&x.venc.slice(0,7)===ms;}).forEach(function(x){s3+=parseFloat(x.valor)||0;});
+    cashOpExp().filter(function(x){return x.venc&&x.venc.slice(0,7)===ms;}).forEach(function(x){s3+=parseFloat(x.valor)||0;});
     manutAllParcelas().filter(function(p){return p.venc&&p.venc.slice(0,7)===ms;}).forEach(function(p){e3+=p.v;});
     orRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.slice(0,7)===ms;}).forEach(function(r){e3+=parseFloat(r.valor)||0;});
     cum+=e3-s3;
@@ -3282,9 +3368,9 @@ function renderFluxo() {
     var ek=0,sk=0;
     db.clients.forEach(function(c){
       cliRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)===mk)ek+=parseFloat(r.valor)||0;});
-      (c.expenses||[]).forEach(function(ex){var ed=ex.data||c.dvenda||'';if(ed&&ed.slice(0,7)===mk)sk+=parseFloat(ex.valor)||0;});
+      cashCliExp(c).forEach(function(ex){var ed=ex.data||c.dvenda||'';if(ed&&ed.slice(0,7)===mk)sk+=parseFloat(ex.valor)||0;});
     });
-    db.opExp.filter(function(x){return x.venc&&x.venc.slice(0,7)===mk;}).forEach(function(x){sk+=parseFloat(x.valor)||0;});
+    cashOpExp().filter(function(x){return x.venc&&x.venc.slice(0,7)===mk;}).forEach(function(x){sk+=parseFloat(x.valor)||0;});
     manutAllParcelas().filter(function(p){return p.venc&&p.venc.slice(0,7)===mk;}).forEach(function(p){ek+=p.v;});
     orRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.slice(0,7)===mk;}).forEach(function(r){ek+=parseFloat(r.valor)||0;});
     dE.push(Math.round(ek)); dS2.push(Math.round(sk));
@@ -3443,15 +3529,15 @@ function renderDash() {
       else rPrev+=parseFloat(r.valor)||0;
     });
     // Despesas de venda no periodo (usa dvenda como fallback se data vazia)
-    (c.expenses||[]).forEach(function(e){
+    cashCliExp(c).forEach(function(e){
       var eDate = e.data || c.dvenda || '';
       if(!(inRange(eDate,from,to)))return;
       if(e.status==='REALIZADO') dReal+=parseFloat(e.valor)||0;
       else dPrev+=parseFloat(e.valor)||0;
     });
   });
-  // Despesas operacionais no periodo
-  db.opExp.filter(function(e){return inRange(e.venc,from,to);}).forEach(function(e){
+  // Despesas operacionais no periodo (+ NFs de fornecedor)
+  cashOpExp().filter(function(e){return inRange(e.venc,from,to);}).forEach(function(e){
     if(e.status==='REALIZADO') dReal+=parseFloat(e.valor)||0;
     else dPrev+=parseFloat(e.valor)||0;
   });
@@ -3602,9 +3688,9 @@ function renderDash() {
     var e4=0,s4=0;
     db.clients.forEach(function(c){
       cliRecs(c).forEach(function(r){var rd3=r.venc||c.dvenda||'';if(rd3&&rd3.indexOf(m3)===0)e4+=parseFloat(r.valor)||0;});
-      (c.expenses||[]).forEach(function(ex){var ed3=ex.data||c.dvenda||'';if(ed3&&ed3.indexOf(m3)===0)s4+=parseFloat(ex.valor)||0;});
+      cashCliExp(c).forEach(function(ex){var ed3=ex.data||c.dvenda||'';if(ed3&&ed3.indexOf(m3)===0)s4+=parseFloat(ex.valor)||0;});
     });
-    db.opExp.filter(function(x){return x.venc&&x.venc.indexOf(m3)===0;}).forEach(function(x){s4+=parseFloat(x.valor)||0;});
+    cashOpExp().filter(function(x){return x.venc&&x.venc.indexOf(m3)===0;}).forEach(function(x){s4+=parseFloat(x.valor)||0;});
     manutAllParcelas().filter(function(p){return p.venc&&p.venc.indexOf(m3)===0;}).forEach(function(p){e4+=p.v;});
     orRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.indexOf(m3)===0;}).forEach(function(r){e4+=parseFloat(r.valor)||0;});
     dE.push(Math.round(e4));dS3.push(Math.round(s4));
@@ -3632,6 +3718,241 @@ var _bairroNomes={};
 function bairroKey(t){ var n=normTxt(t); if(!_bairroNomes[n]){ var cad=gAux('bairros').find(function(b){ return normTxt(b.name)===n; }); _bairroNomes[n]=cad?cad.name:t.replace(/\s+/g,' ').replace(/(^|\s)\S/g,function(m){return m.toUpperCase();}); } return _bairroNomes[n]; }
 var METS=[{id:'qtd_modelo',label:'Qtd. por Modelo'},{id:'qtd_origem',label:'Qtd. por Origem'},{id:'qtd_tipologia',label:'Qtd. por Tipologia'},{id:'ticket_medio',label:'Ticket Medio por Modelo'},{id:'valor_vendedor',label:'Valor por Vendedor'},{id:'valor_arquiteto',label:'Valor por Parceiro'},{id:'qtd_bairro',label:'Qtd. por Bairro'}];
 var anaActive=new Set(['qtd_modelo','qtd_origem','qtd_tipologia','ticket_medio','valor_vendedor','valor_arquiteto','qtd_bairro']);
+
+
+// ═══ NFs DE FORNECEDOR ═══
+// Uma NF (conta a pagar) pode cobrir várias despesas de clientes, despesas operacionais e compras p/ estoque.
+// Despesas cobertas saem do fluxo de caixa; quem aparece é a NF (suas parcelas).
+function nfLbl(){ return Array.prototype.slice.call(arguments).filter(function(x){ return x && x!=='-'; }).join(' · '); }
+function nfTot(nf){ return r2((nf.itens||[]).reduce(function(s,i){ return s+(parseFloat(i.valor)||0); },0)); }
+function nfPaid(nf){ var ps=nf.parcelas||[]; return ps.length>0 && ps.every(function(p){ return p.status==='REALIZADO'; }); }
+function nfFindExp(id){
+  for (var i=0;i<(db.clients||[]).length;i++){ var c=db.clients[i]; var e=(c.expenses||[]).find(function(x){return x.id===id;}); if(e) return {e:e,c:c,kind:'cli'}; }
+  var o=(db.opExp||[]).find(function(x){return x.id===id;}); if(o) return {e:o,c:null,kind:'op'};
+  return null;
+}
+function nfLinkMap(skipNfId){
+  var L={};
+  (db.nfs||[]).forEach(function(nf){ if(skipNfId && nf.id===skipNfId) return;
+    (nf.itens||[]).forEach(function(it){ if(!it.ref || it.tipo==='est') return;
+      var l=L[it.ref]||(L[it.ref]={sum:0,full:false,nfs:[],nums:[]});
+      l.sum+=parseFloat(it.valor)||0; if(it.quita) l.full=true;
+      if(l.nfs.indexOf(nf)<0){ l.nfs.push(nf); l.nums.push(nf.numero); }
+    }); });
+  return L;
+}
+function nfClearExp(e, restore){
+  if(restore && e.valorPrev!==undefined){ e.valor=e.valorPrev; if(e.qtd!==undefined){ var q=parseFloat(e.qtd)||1; e.unit=r2(e.valor/q); } }
+  if(restore && e.stPrev!==undefined){ e.status=e.stPrev; e.def=e.defPrev||''; }
+  delete e.valorPrev; delete e.stPrev; delete e.defPrev; delete e.nfFull; delete e.nfCov; delete e.nfNums; delete e.nfLink;
+}
+function nfSyncAll(){
+  if(!db.nfs) db.nfs=[];
+  var L=nfLinkMap(null);
+  var each=function(e, isCli){
+    var l=e.id && L[e.id];
+    if(!l){ if(e.nfLink) nfClearExp(e,true); return; }
+    if(!l.full && e.valorPrev!==undefined) nfClearExp(e,true);
+    e.nfLink=true; e.nfCov=r2(l.sum); e.nfNums=l.nums.join(', ');
+    if(l.full){
+      if(e.valorPrev===undefined){ e.valorPrev=parseFloat(e.valor)||0; e.stPrev=e.status||'PREVISTO'; e.defPrev=e.def||''; }
+      e.nfFull=true; e.valor=r2(l.sum);
+      if(isCli){ var q=parseFloat(e.qtd)||1; e.unit=r2(e.valor/q); }
+      var allPaid=l.nfs.every(nfPaid);
+      if(allPaid){ var md=''; l.nfs.forEach(function(nf){ (nf.parcelas||[]).forEach(function(p){ if((p.def||'')>md) md=p.def||''; }); }); e.status='REALIZADO'; e.def=md; }
+      else { e.status='LANCADO'; e.def=''; }
+    } else { e.nfFull=false; }
+  };
+  (db.clients||[]).forEach(function(c){ (c.expenses||[]).forEach(function(e){ each(e,true); }); });
+  (db.opExp||[]).forEach(function(e){ each(e,false); });
+}
+// Valor de uma despesa que ainda vai para o caixa sozinho (sem NF)
+function expCashVal(e){ var v=parseFloat(e.valor)||0; if(e.nfFull) return 0; if(e.nfCov) return Math.max(0, r2(v-e.nfCov)); return v; }
+function cashCliExp(c){
+  var out=[]; (c.expenses||[]).forEach(function(e){ var v=expCashVal(e); if(v<=0) return;
+    out.push(e.nfCov? Object.assign({},e,{valor:v, desc:(e.desc||auxN('catDespesas',e.catId))+' (saldo sem NF)'}) : e); });
+  return out;
+}
+function nfAllocTxt(nf){
+  var parts=[];
+  (nf.itens||[]).forEach(function(it){
+    var v=fmtM(parseFloat(it.valor)||0);
+    if(it.tipo==='est') parts.push('Estoque'+(it.desc?' ('+it.desc+')':'')+' '+v);
+    else { var f=nfFindExp(it.ref); if(!f) parts.push('(despesa excluída) '+v);
+      else if(f.kind==='cli') parts.push(f.c.nome+' '+v); else parts.push((nfLbl(auxN('catOp',f.e.catId),f.e.desc)||'Despesa operacional')+' '+v); }
+  });
+  return parts.join(' · ');
+}
+function cashOpExp(){
+  var out=[]; (db.opExp||[]).forEach(function(e){ var v=expCashVal(e); if(v<=0) return; out.push(e.nfCov? Object.assign({},e,{valor:v, desc:(e.desc||'')+' (saldo sem NF)'}) : e); });
+  (db.nfs||[]).forEach(function(nf){ var ps=nf.parcelas||[], n=ps.length, al=nfAllocTxt(nf);
+    ps.forEach(function(pp,k){ out.push({id:'nf_'+nf.id+'_'+k, venc:pp.venc, valor:parseFloat(pp.valor)||0, status:pp.status||'LANCADO', def:pp.def||'', catId:'', ccId:'',
+      desc:'NF '+nf.numero+' — '+nf.fornecedor+(n>1?' ('+(k+1)+'/'+n+')':''), _nf:true, _nfAlloc:al}); }); });
+  return out;
+}
+function nfBadge(e){
+  if(!e || !e.nfLink) return '';
+  return '<span class="nf-badge" title="'+(e.nfFull?'Valor real da nota; pagamento controlado pela NF':'NF cobre '+fmtM(e.nfCov)+' desta despesa')+'">NF '+escA(e.nfNums)+(e.nfFull?'':' · parcial')+'</span>';
+}
+
+// ---- Página ----
+function renderNfs(){
+  var pr=pRange('nf'), from=pr.from, to=pr.to;
+  var fs=G('nf-fs').value, q=normTxt(G('nf-q').value).split(' ').filter(Boolean);
+  var list=(db.nfs||[]).filter(function(nf){
+    if((from||to) && !(nf.parcelas||[]).some(function(p){ return inRange(p.venc,from,to); }) && !inRange(nf.emissao,from,to)) return false;
+    var paid=nfPaid(nf), dif=Math.abs(r2((parseFloat(nf.valor)||0)-nfTot(nf)))>0.009;
+    if(fs==='aberta' && paid) return false; if(fs==='paga' && !paid) return false; if(fs==='dif' && !dif) return false;
+    if(q.length){ var txt=normTxt([nf.numero,nf.fornecedor,nf.obs,fmtM(nf.valor),String(nf.valor),fmtD(nf.emissao),nfAllocTxt(nf),(nf.itens||[]).map(function(i){ var f=nfFindExp(i.ref); return f?(f.e.desc||'')+' '+auxN(f.kind==='cli'?'catDespesas':'catOp',f.e.catId):(i.desc||''); }).join(' '),(nf.parcelas||[]).map(function(p){return fmtD(p.venc)+' '+fmtM(p.valor);}).join(' ')].join(' '));
+      if(!q.every(function(t){return txt.indexOf(t)>=0;})) return false; }
+    return true;
+  }).sort(function(a,b){ return (a.emissao||'')<(b.emissao||'')?1:(a.emissao||'')>(b.emissao||'')?-1:0; });
+  var tAb=0,tPg=0,tEst=0,tDif=0;
+  list.forEach(function(nf){ (nf.parcelas||[]).forEach(function(p){ if(p.status==='REALIZADO') tPg+=parseFloat(p.valor)||0; else tAb+=parseFloat(p.valor)||0; });
+    (nf.itens||[]).forEach(function(i){ if(i.tipo==='est') tEst+=parseFloat(i.valor)||0; });
+    tDif+=r2((parseFloat(nf.valor)||0)-nfTot(nf)); });
+  G('nf-kpis').innerHTML='<div class="kc ca"><div class="kl">NFs</div><div class="kv">'+list.length+'</div></div>'
+    +'<div class="kc co"><div class="kl">A pagar</div><div class="kv">'+fmtM(tAb)+'</div></div>'
+    +'<div class="kc cg"><div class="kl">Pago</div><div class="kv">'+fmtM(tPg)+'</div></div>'
+    +'<div class="kc"><div class="kl">Compras p/ estoque</div><div class="kv">'+fmtM(tEst)+'</div></div>'
+    +(Math.abs(tDif)>0.009?'<div class="kc cr"><div class="kl">Não alocado</div><div class="kv">'+fmtM(tDif)+'</div></div>':'');
+  var tb=G('nf-tb');
+  if(!list.length){ tb.innerHTML='<tr><td colspan="8" class="te">Nenhuma NF</td></tr>'; return; }
+  tb.innerHTML=list.map(function(nf){
+    var ps=nf.parcelas||[], pg=ps.filter(function(p){return p.status==='REALIZADO';}).length;
+    var nx=ps.find(function(p){return p.status!=='REALIZADO';});
+    var dif=r2((parseFloat(nf.valor)||0)-nfTot(nf)), al=nfAllocTxt(nf);
+    var atras=nx && nx.venc && nx.venc<today();
+    return '<tr><td>'+fmtD(nf.emissao)+'</td><td style="font-weight:600">'+escA(nf.numero)+'</td><td>'+escA(nf.fornecedor)+'</td>'
+      +'<td class="money neg">'+fmtM(nf.valor)+'</td>'
+      +'<td style="font-size:12px">'+pg+'/'+ps.length+' paga(s)'+(nx?'<div style="color:'+(atras?'var(--rd)':'var(--tx2)')+'">próx.: '+fmtD(nx.venc)+' · '+fmtM(nx.valor)+'</div>':'')+'</td>'
+      +'<td style="font-size:12px;max-width:340px">'+escA(al||'—')+(Math.abs(dif)>0.009?'<div style="color:var(--rd);font-weight:600">Não alocado: '+fmtM(dif)+'</div>':'')+'</td>'
+      +'<td>'+bdg(nfPaid(nf)?'REALIZADO':(pg?'LANCADO':'LANCADO'))+'</td>'
+      +'<td><div style="display:flex;gap:3px"><button class="btn bsm bs nf-edit-btn" data-id="'+nf.id+'">Editar</button>'
+      +(nx?'<button class="btn bsm bok nf-pay-btn" data-id="'+nf.id+'" title="Marcar a próxima parcela como paga hoje">Pagar</button>':'')
+      +'<button class="btn bsm bd2 nf-del-btn" data-id="'+nf.id+'">X</button></div></td></tr>';
+  }).join('');
+}
+
+// ---- Modal ----
+var nfEId=null, nfItems=[], nfParc=[];
+function nfAddDays(d,n){ var x=new Date(d+'T12:00:00'); x.setDate(x.getDate()+n); return x.toISOString().slice(0,10); }
+function openNfModal(id){
+  nfEId=id||null;
+  var nf=id?(db.nfs||[]).find(function(x){return x.id===id;}):null;
+  var forn={}; (db.nfs||[]).forEach(function(x){ if(x.fornecedor) forn[x.fornecedor]=1; });
+  G('nf-forn-list').innerHTML=Object.keys(forn).sort(function(a,b){return normTxt(a).localeCompare(normTxt(b),'pt-BR');}).map(function(f){return '<option value="'+escA(f)+'">';}).join('');
+  G('m-nf-t').textContent=nf?'Editar NF '+nf.numero:'Nova NF de Fornecedor';
+  G('nf-forn').value=nf?nf.fornecedor:''; G('nf-num').value=nf?nf.numero:''; G('nf-emi').value=nf?(nf.emissao||''):today();
+  G('nf-val').value=nf?nf.valor:''; G('nf-obs').value=nf?(nf.obs||''):'';
+  nfParc=nf?JSON.parse(JSON.stringify(nf.parcelas||[])):[];
+  nfItems=nf?JSON.parse(JSON.stringify(nf.itens||[])):[];
+  G('nf-np').value=nfParc.length||1; G('nf-v1').value=nfParc.length?nfParc[0].venc:nfAddDays(today(),30); G('nf-int').value=30;
+  if(!nfParc.length) nfGenParc();
+  nfRenderParc(); nfRenderItems();
+  openModal('m-nf');
+}
+function nfGenParc(){
+  var tot=parseFloat(G('nf-val').value)||0, n=Math.max(1,parseInt(G('nf-np').value)||1), v1=G('nf-v1').value||today(), it=Math.max(1,parseInt(G('nf-int').value)||30);
+  var base=Math.floor(tot/n*100)/100, out=[];
+  for(var k=0;k<n;k++){ var old=nfParc[k]||{}; out.push({venc:nfAddDays(v1,it*k), valor:k===n-1?r2(tot-base*(n-1)):base, status:old.status||'LANCADO', def:old.def||''}); }
+  nfParc=out;
+}
+function nfRenderParc(){
+  G('nf-parc').innerHTML=nfParc.map(function(p,k){
+    return '<tr><td>'+(k+1)+'</td><td><input type="date" data-k="'+k+'" data-f="venc" value="'+(p.venc||'')+'"></td>'
+      +'<td><input type="number" step="0.01" min="0" data-k="'+k+'" data-f="valor" value="'+(p.valor||'')+'" style="width:110px"></td>'
+      +'<td><select data-k="'+k+'" data-f="status"><option value="PREVISTO"'+(p.status==='PREVISTO'?' selected':'')+'>Previsto</option><option value="LANCADO"'+(p.status==='LANCADO'?' selected':'')+'>Lançado (a pagar)</option><option value="REALIZADO"'+(p.status==='REALIZADO'?' selected':'')+'>Pago</option></select></td>'
+      +'<td><input type="date" data-k="'+k+'" data-f="def" value="'+(p.def||'')+'"></td></tr>';
+  }).join('');
+  nfParcInfo();
+}
+function nfParcInfo(){
+  var tot=parseFloat(G('nf-val').value)||0, sp=r2(nfParc.reduce(function(s,p){return s+(parseFloat(p.valor)||0);},0));
+  G('nf-parc-info').innerHTML=Math.abs(sp-tot)>0.009?'<span style="color:var(--rd);font-weight:600">Soma das parcelas ('+fmtM(sp)+') diferente do valor da NF ('+fmtM(tot)+'). Clique em "Gerar parcelas" ou ajuste os valores.</span>':'<span style="color:var(--tx3)">Parcelas somam '+fmtM(sp)+'.</span>';
+}
+function nfBaseOf(e){ return e.valorPrev!==undefined? e.valorPrev : (parseFloat(e.valor)||0); }
+function nfOptions(tipo){
+  var L=nfLinkMap(nfEId), used={}, out=[];
+  nfItems.forEach(function(i){ if(i.ref) used[i.ref]=1; });
+  if(tipo==='cli'){
+    sortAlpha((db.clients||[]).map(function(c){return {name:c.nome,c:c};})).forEach(function(x){ var c=x.c;
+      (c.expenses||[]).slice().sort(function(a,b){return (a.data||'')<(b.data||'')?-1:1;}).forEach(function(e){
+        if(!e.id) return; var l=L[e.id]; if(l && l.full) return;
+        var base=nfBaseOf(e), cov=l?l.sum:0;
+        out.push({id:e.id, rem:Math.max(0,r2(base-cov)), used:!!used[e.id],
+          label:c.nome+' — '+nfLbl(auxN('catDespesas',e.catId),e.desc), sub:'previsto '+fmtM(base)+(cov?' · já em outra NF '+fmtM(cov):'')+(e.data?' · '+fmtD(e.data):'')+' · '+({PREVISTO:'Previsto',LANCADO:'Lançado',REALIZADO:'Realizado'}[e.status]||'')});
+      }); });
+  } else {
+    (db.opExp||[]).slice().sort(function(a,b){return (a.venc||'')<(b.venc||'')?-1:1;}).forEach(function(e){
+      var l=L[e.id]; if(l && l.full) return; var base=nfBaseOf(e), cov=l?l.sum:0;
+      out.push({id:e.id, rem:Math.max(0,r2(base-cov)), used:!!used[e.id],
+        label:nfLbl(auxN('catOp',e.catId),e.desc)||'Despesa operacional', sub:nfLbl(auxN('centrosCusto',e.ccId),'previsto '+fmtM(base))+(cov?' · já em outra NF '+fmtM(cov):'')+(e.venc?' · venc. '+fmtD(e.venc):'')});
+    });
+  }
+  return out;
+}
+function nfItemLabel(it){
+  var f=it.ref?nfFindExp(it.ref):null; if(!f) return it.ref?'(despesa excluída)':'';
+  return f.kind==='cli'? f.c.nome+' — '+nfLbl(auxN('catDespesas',f.e.catId),f.e.desc) : (nfLbl(auxN('catOp',f.e.catId),f.e.desc)||'Despesa operacional');
+}
+function nfRenderItems(){
+  var el=G('nf-items');
+  if(!nfItems.length){ el.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:6px 2px">Nenhum item ainda. Adicione as despesas que esta nota paga e/ou o valor que foi para estoque.</div>'; nfSum(); return; }
+  el.innerHTML=nfItems.map(function(it,i){
+    var tSel='<select data-i="'+i+'" data-f="tipo"><option value="cli"'+(it.tipo==='cli'?' selected':'')+'>Despesa de cliente</option><option value="op"'+(it.tipo==='op'?' selected':'')+'>Despesa operacional</option><option value="est"'+(it.tipo==='est'?' selected':'')+'>Estoque</option></select>';
+    var ref = it.tipo==='est'
+      ? '<div class="nfi-ref"><input type="text" data-i="'+i+'" data-f="desc" value="'+escA(it.desc||'')+'" placeholder="Descrição (opcional) — ex.: produtos químicos"></div>'
+      : '<div class="nfi-ref combo-wrap"><input type="text" class="combo-input nfi-q" data-i="'+i+'" value="'+escA(nfItemLabel(it))+'" placeholder="Digite para buscar '+(it.tipo==='cli'?'cliente, categoria ou item':'categoria ou descrição')+'..." autocomplete="off"><div class="combo-drop" id="nfi-drop-'+i+'"></div></div>';
+    var info='';
+    if(it.tipo!=='est' && it.ref){ var f=nfFindExp(it.ref); if(f){ var L=nfLinkMap(nfEId), cov=L[it.ref]?L[it.ref].sum:0, base=nfBaseOf(f.e);
+      info='<div class="nfi-info">Previsto: <b>'+fmtM(base)+'</b>'+(cov?' · já coberto por outra NF: '+fmtM(cov):'')+(it.quita?' · ao salvar, o valor da despesa passa a ser o desta nota':' · o restante continua previsto no fluxo')+'</div>'; } }
+    return '<div class="nfi">'+tSel+ref
+      +'<input type="number" class="nfi-v" step="0.01" min="0" data-i="'+i+'" data-f="valor" value="'+(it.valor||'')+'" placeholder="Valor R$">'
+      +(it.tipo!=='est'?'<label style="font-size:12px;display:flex;align-items:center;gap:4px;white-space:nowrap" title="Marcado: esta nota quita a despesa. Desmarcado: a nota paga só uma parte e o restante continua previsto."><input type="checkbox" data-i="'+i+'" data-f="quita"'+(it.quita?' checked':'')+'> Quita a despesa</label>':'')
+      +'<button type="button" class="btn bsm bd2 nfi-del" data-i="'+i+'">X</button>'+info+'</div>';
+  }).join('');
+  nfSum();
+}
+function nfSum(){
+  var tot=parseFloat(G('nf-val').value)||0, al=r2(nfItems.reduce(function(s,i){return s+(parseFloat(i.valor)||0);},0)), dif=r2(tot-al);
+  var cli=0,op=0,est=0; nfItems.forEach(function(i){ var v=parseFloat(i.valor)||0; if(i.tipo==='cli') cli+=v; else if(i.tipo==='op') op+=v; else est+=v; });
+  G('nf-sum').innerHTML='<span>Valor da NF: <b>'+fmtM(tot)+'</b></span><span>Clientes: <b>'+fmtM(cli)+'</b></span><span>Operacional: <b>'+fmtM(op)+'</b></span><span>Estoque: <b>'+fmtM(est)+'</b></span>'
+    +(Math.abs(dif)>0.009?'<span style="color:var(--rd);font-weight:700">'+(dif>0?'Falta alocar: ':'Alocado a mais: ')+fmtM(Math.abs(dif))+'</span>'+(dif>0?' <button type="button" class="btn bsm bs" id="nf-dif-est">Lançar diferença como Estoque</button>':''):'<span style="color:var(--gn);font-weight:700">✓ Totalmente alocada</span>');
+}
+function nfRenderDrop(inp){
+  var i=parseInt(inp.getAttribute('data-i')), it=nfItems[i], drop=G('nfi-drop-'+i); if(!drop||!it) return;
+  var q=normTxt(inp.value).split(' ').filter(Boolean);
+  var opts=nfOptions(it.tipo).filter(function(o){ if(o.used && o.id!==it.ref) return false; var t=normTxt(o.label+' '+o.sub); return !q.length || q.every(function(w){return t.indexOf(w)>=0;}); });
+  if(inp._full) opts=nfOptions(it.tipo).filter(function(o){ return !(o.used && o.id!==it.ref); });
+  drop.innerHTML=opts.length? opts.slice(0,60).map(function(o){ return '<div class="combo-opt" data-id="'+o.id+'" data-rem="'+o.rem+'"><div>'+escA(o.label)+'</div><div style="font-size:11px;color:var(--tx3)">'+escA(o.sub)+'</div></div>'; }).join('')+(opts.length>60?'<div class="combo-opt no-match">… refine a busca ('+opts.length+' resultados)</div>':'')
+    : '<div class="combo-opt no-match">Nenhuma despesa encontrada</div>';
+  drop.classList.add('open');
+}
+function saveNf(){
+  var d={ fornecedor:G('nf-forn').value.trim(), numero:G('nf-num').value.trim(), emissao:G('nf-emi').value, valor:r2(parseFloat(G('nf-val').value)||0), obs:G('nf-obs').value.trim() };
+  if(!d.fornecedor){showToast('Informe o fornecedor');return;}
+  if(!d.numero){showToast('Informe o número da NF');return;}
+  if(!d.valor){showToast('Informe o valor da NF');return;}
+  if(!nfParc.length){showToast('Gere as parcelas de pagamento');return;}
+  if(nfParc.some(function(p){return !p.venc;})){showToast('Preencha o vencimento de todas as parcelas');return;}
+  var sp=r2(nfParc.reduce(function(s,p){return s+(parseFloat(p.valor)||0);},0));
+  if(Math.abs(sp-d.valor)>0.009){showToast('A soma das parcelas precisa ser igual ao valor da NF');return;}
+  var bad=nfItems.find(function(i){ return i.tipo!=='est' && !i.ref; });
+  if(bad){showToast('Escolha a despesa em todos os itens (ou remova o item vazio)');return;}
+  if(nfItems.some(function(i){ return !(parseFloat(i.valor)>0); })){showToast('Informe o valor de todos os itens');return;}
+  nfParc.forEach(function(p){ p.valor=r2(parseFloat(p.valor)||0); if(p.status==='REALIZADO' && !p.def) p.def=today(); if(p.status!=='REALIZADO') p.def=''; });
+  d.parcelas=nfParc; d.itens=nfItems.map(function(i){ return {tipo:i.tipo, ref:i.tipo==='est'?'':i.ref, desc:i.tipo==='est'?(i.desc||''):'', valor:r2(parseFloat(i.valor)||0), quita:i.tipo==='est'?false:!!i.quita}; });
+  var go2=function(){
+    if(!db.nfs) db.nfs=[];
+    if(nfEId){ var k=db.nfs.findIndex(function(x){return x.id===nfEId;}); if(k>=0) db.nfs[k]=Object.assign({},db.nfs[k],d); }
+    else db.nfs.push(Object.assign({id:uid()},d));
+    sdb(); closeModal('m-nf'); renderNfs(); showToast('NF salva!');
+  };
+  var dif=r2(d.valor-nfTot(d));
+  if(Math.abs(dif)>0.009) confirm2('Valor não alocado','Esta NF tem '+fmtM(Math.abs(dif))+(dif>0?' sem destino (nem cliente, nem operacional, nem estoque)':' alocado a mais')+'. Salvar assim mesmo?',go2);
+  else go2();
+}
 
 // ═══ LEADS ═══
 var VI_LOCAL={CASA:'Casa do cliente',LOJA:'Loja',AMBOS:'Cliente e loja'};
@@ -4345,7 +4666,7 @@ function renderSaldo() {
       if (r.status==='RECEBIDO') totalRec += parseFloat(r.valor)||0;
       else recPrev += parseFloat(r.valor)||0;
     });
-    (c.expenses||[]).forEach(function(e) {
+    cashCliExp(c).forEach(function(e) {
       var d = e.data || '';
       if (!d) return;
       if (!noFilter && !inRange(d, from, to)) return;
@@ -4353,7 +4674,7 @@ function renderSaldo() {
       else despPrev += parseFloat(e.valor)||0;
     });
   });
-  db.opExp.forEach(function(e) {
+  cashOpExp().forEach(function(e) {
     var d = e.venc || '';
     if (!d) return;
     if (!noFilter && !inRange(d, from, to)) return;
@@ -4743,7 +5064,7 @@ function renderResCliente() {
 // ═══ INIT — ALL EVENT LISTENERS HERE ═══
 document.addEventListener('DOMContentLoaded', function() {
   // NAV MENU
-  ['dashboard','metas','analytics','leads','visitas','clientes','recebimentos','manutencao','desp-venda','desp-op','outras-rec','fluxo','dre','saldo','res-cliente','cadastros','comissoes','comiss-mes'].forEach(function(p) {
+  ['dashboard','metas','analytics','leads','visitas','clientes','recebimentos','manutencao','desp-venda','desp-op','nfs','outras-rec','fluxo','dre','saldo','res-cliente','cadastros','comissoes','comiss-mes'].forEach(function(p) {
     var el = G('nav-'+p);
     if (el) el.addEventListener('click', function() { go(p); G('sb').classList.remove('open'); G('sb-bk').classList.remove('open'); });
   });
@@ -5164,6 +5485,56 @@ document.addEventListener('DOMContentLoaded', function() {
   G('or-apply-btn').addEventListener('click', renderOutrasRec);
   G('or-fs').addEventListener('change', renderOutrasRec);
   G('or-q').addEventListener('input', renderOutrasRec);
+  // NFs DE FORNECEDOR
+  G('nf-pt').addEventListener('change', function(){ pSetup('nf'); renderNfs(); });
+  ['nf-m','nf-f','nf-t','nf-fs'].forEach(function(id){ G(id).addEventListener('change', renderNfs); });
+  G('nf-q').addEventListener('input', renderNfs);
+  G('btn-nova-nf').addEventListener('click', function(){ openNfModal(null); });
+  G('m-nf-close').addEventListener('click', function(){ closeModal('m-nf'); });
+  G('m-nf-cancel').addEventListener('click', function(){ closeModal('m-nf'); });
+  G('m-nf-save').addEventListener('click', saveNf);
+  G('nf-gerar').addEventListener('click', function(){ nfGenParc(); nfRenderParc(); });
+  G('nf-val').addEventListener('input', function(){ if(nfParc.length===1 && nfParc[0].status!=='REALIZADO'){ nfParc[0].valor=r2(parseFloat(G('nf-val').value)||0); nfRenderParc(); } else nfParcInfo(); nfSum(); });
+  G('nf-parc').addEventListener('change', function(e){ var t=e.target, k=t.getAttribute('data-k'), f=t.getAttribute('data-f'); if(k===null) return;
+    nfParc[k][f]=t.value; if(f==='status'){ if(t.value==='REALIZADO' && !nfParc[k].def) nfParc[k].def=today(); if(t.value!=='REALIZADO') nfParc[k].def=''; nfRenderParc(); } else nfParcInfo(); });
+  G('nf-parc').addEventListener('input', function(e){ var t=e.target; if(t.getAttribute('data-f')==='valor'){ nfParc[t.getAttribute('data-k')].valor=t.value; nfParcInfo(); } });
+  ['cli','op','est'].forEach(function(tp){ G('nf-add-'+tp).addEventListener('click', function(){
+    var tot=parseFloat(G('nf-val').value)||0, al=nfItems.reduce(function(s,i){return s+(parseFloat(i.valor)||0);},0);
+    nfItems.push({tipo:tp, ref:'', desc:'', valor:tp==='est'&&tot>al?r2(tot-al):'', quita:true}); nfRenderItems();
+    var q=document.querySelector('#nf-items .nfi:last-child '+(tp==='est'?'input[data-f="valor"]':'.nfi-q')); if(q){ q.focus(); }
+  }); });
+  var nfBox=G('nf-items');
+  nfBox.addEventListener('input', function(e){ var t=e.target, i=t.getAttribute('data-i'); if(i===null) return; i=parseInt(i);
+    if(t.classList.contains('nfi-q')){ t._full=false; nfRenderDrop(t); return; }
+    var f=t.getAttribute('data-f'); if(f==='valor'){ nfItems[i].valor=t.value; nfSum(); } else if(f==='desc'){ nfItems[i].desc=t.value; } });
+  nfBox.addEventListener('focusin', function(e){ if(e.target.classList.contains('nfi-q')){ e.target._full=true; nfRenderDrop(e.target); e.target.select(); } });
+  nfBox.addEventListener('focusout', function(e){ var t=e.target; if(t.classList.contains('nfi-q')){ setTimeout(function(){ var d=G('nfi-drop-'+t.getAttribute('data-i')); if(d) d.classList.remove('open'); var it=nfItems[parseInt(t.getAttribute('data-i'))]; if(it && document.activeElement!==t) t.value=nfItemLabel(it); },150); } });
+  nfBox.addEventListener('keydown', function(e){ var t=e.target; if(!t.classList.contains('nfi-q')) return; var d=G('nfi-drop-'+t.getAttribute('data-i')); if(!d) return;
+    var opts=d.querySelectorAll('.combo-opt:not(.no-match)'), hl=d.querySelector('.combo-opt.hl'), idx=Array.prototype.indexOf.call(opts,hl);
+    if(e.key==='ArrowDown'){ e.preventDefault(); var n=opts[idx+1]||opts[0]; if(n){ if(hl) hl.classList.remove('hl'); n.classList.add('hl'); n.scrollIntoView({block:'nearest'}); } }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); var pv=opts[idx-1]||opts[opts.length-1]; if(pv){ if(hl) hl.classList.remove('hl'); pv.classList.add('hl'); pv.scrollIntoView({block:'nearest'}); } }
+    else if(e.key==='Enter'){ e.preventDefault(); if(hl) hl.dispatchEvent(new MouseEvent('mousedown',{bubbles:true})); } });
+  nfBox.addEventListener('mousedown', function(e){ var o=e.target.closest('.combo-opt'); if(!o||o.classList.contains('no-match')) return; e.preventDefault();
+    var d=o.closest('.combo-drop'), i=parseInt(d.id.replace('nfi-drop-','')), it=nfItems[i]; if(!it) return;
+    it.ref=o.getAttribute('data-id'); var rem=parseFloat(o.getAttribute('data-rem'))||0;
+    var tot=parseFloat(G('nf-val').value)||0, al=nfItems.reduce(function(s,x,j){return j===i?s:s+(parseFloat(x.valor)||0);},0);
+    if(!(parseFloat(it.valor)>0)) it.valor = rem>0 ? (tot>al&&tot-al<rem? r2(tot-al) : rem) : '';
+    nfRenderItems(); var v=document.querySelector('#nf-items input[data-i="'+i+'"][data-f="valor"]'); if(v){ v.focus(); v.select(); } });
+  nfBox.addEventListener('change', function(e){ var t=e.target, i=t.getAttribute('data-i'); if(i===null) return; i=parseInt(i); var f=t.getAttribute('data-f');
+    if(f==='tipo'){ nfItems[i].tipo=t.value; nfItems[i].ref=''; nfItems[i].desc=''; nfRenderItems(); }
+    else if(f==='quita'){ nfItems[i].quita=t.checked; nfRenderItems(); }
+    else if(f==='valor'){ nfItems[i].valor=t.value; nfSum(); } });
+  nfBox.addEventListener('click', function(e){ var x=e.target.closest('.nfi-del'); if(x){ nfItems.splice(parseInt(x.getAttribute('data-i')),1); nfRenderItems(); } });
+  G('nf-sum').addEventListener('click', function(e){ if(e.target.id==='nf-dif-est'){ var tot=parseFloat(G('nf-val').value)||0, al=nfItems.reduce(function(s,i){return s+(parseFloat(i.valor)||0);},0); nfItems.push({tipo:'est',ref:'',desc:'',valor:r2(tot-al),quita:false}); nfRenderItems(); } });
+  G('nf-tb').addEventListener('click', function(e){
+    var eb=e.target.closest('.nf-edit-btn'); if(eb){ openNfModal(eb.getAttribute('data-id')); return; }
+    var pb=e.target.closest('.nf-pay-btn');
+    if(pb){ var nf=(db.nfs||[]).find(function(x){return x.id===pb.getAttribute('data-id');}); if(!nf) return; var p=(nf.parcelas||[]).find(function(x){return x.status!=='REALIZADO';}); if(!p) return;
+      confirm2('Pagar parcela','NF '+escA(nf.numero)+' — '+escA(nf.fornecedor)+': marcar parcela de '+fmtM(p.valor)+' (venc. '+fmtD(p.venc)+') como paga hoje?',function(){ p.status='REALIZADO'; p.def=today(); sdb(); renderNfs(); showToast('Parcela paga!'); }); return; }
+    var dl=e.target.closest('.nf-del-btn');
+    if(dl){ var id=dl.getAttribute('data-id'), nf2=(db.nfs||[]).find(function(x){return x.id===id;}); if(!nf2) return;
+      confirm2('Excluir NF','Excluir a NF '+escA(nf2.numero)+' de '+escA(nf2.fornecedor)+'? As despesas ligadas voltam a ter o valor e o status que tinham antes.',function(){ db.nfs=db.nfs.filter(function(x){return x.id!==id;}); sdb(); renderNfs(); showToast('NF excluída'); }); }
+  });
   // LEADS
   G('ld-m').addEventListener('change', renderLeads);
   G('ld-prev').addEventListener('click', function(){ G('ld-m').value=ldMonthAdd(G('ld-m').value||curM(),-1); renderLeads(); });
