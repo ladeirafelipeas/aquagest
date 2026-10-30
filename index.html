@@ -286,7 +286,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 30/10/2026 · 19:40</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 30/10/2026 · 19:50</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -4764,6 +4764,7 @@ function renderSaldo() {
     +'<div class="kc cg"><div class="kl">Receitas Realizadas</div><div class="kv">'+fmtM(totalRec)+'</div><div class="ks">Recebimentos confirmados</div></div>'
     +'<div class="kc co"><div class="kl">Receitas Previstas</div><div class="kv">'+fmtM(recPrev)+'</div><div class="ks">A receber no período</div></div>'
     +'<div class="kc cr"><div class="kl">Despesas Realizadas</div><div class="kv">'+fmtM(totalDesp)+'</div><div class="ks">Pagamentos confirmados</div></div>'
+    +'<div class="kc co"><div class="kl">Despesas Previstas</div><div class="kv">'+fmtM(despPrev)+'</div><div class="ks">Previstas + lançadas, a pagar no período</div></div>'
     +'<div class="kc '+(saldoTotal>=0?'cg':'cr')+'" style="border-width:2px"><div class="kl">Saldo Realizado</div><div class="kv">'+fmtM(saldoTotal)+'</div><div class="ks">Rec. − Desp. realizadas'+(trNet?' '+(trNet>0?'+':'−')+' '+fmtM(Math.abs(trNet))+' transf.':'')+'</div></div>'
     +'<div class="kc '+(saldoProjetado>=0?'cg':'cr')+'" style="border-width:2px;opacity:.75"><div class="kl">Saldo Projetado</div><div class="kv">'+fmtM(saldoProjetado)+'</div><div class="ks">Incluindo previsto</div></div>'
     +'<div class="kc ca"><div class="kl">Total em Caixas</div><div class="kv">'+fmtM(totalCaixas)+'</div><div class="ks">Saldo atual dos caixas</div></div>'
