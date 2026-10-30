@@ -286,7 +286,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 30/10/2026 · 19:15</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 30/10/2026 · 19:40</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -2875,7 +2875,7 @@ function renderRec() {
   var noFilter = (!from && !to);
   db.clients.forEach(function(c){cliRecs(c).forEach(function(r){
     if(fs&&r.status!==fs)return;
-    if(!noFilter && !inRange(r.venc,from,to))return;
+    if(!noFilter && !inRange(effD(r.status==='RECEBIDO',r.def,r.venc),from,to))return;
     all.push({v:r.valor,bruto:r.bruto,taxa:r.taxa,venc:r.venc,forma:r.forma,label:r._label,card:r._card,k:r._k,n:r._n,antec:r._antec,prev:r._prev,ajust:r._ajust,status:r.status,obs:r.obs,def:r.def,cn:c.nome,cid:c.id,idx:r._idx});
   });});
   // Incluir parcelas de manutenção
@@ -2883,7 +2883,7 @@ function renderRec() {
     if(fs && p.status!==fs) return;
     var rDate = p.def || p.venc || '';
     var filterDate = p.venc || '';
-    if(!noFilter && !inRange(filterDate,from,to)) return;
+    if(!noFilter && !inRange(effD(p.status==='RECEBIDO',p.def,filterDate),from,to)) return;
     all.push({v:p.v,bruto:p.bruto,taxa:p.taxa,venc:filterDate,forma:p.forma,status:p.status,obs:p.obs||'',def:p.def,cn:'🔧 '+p.cn,_manut:true,mnId:p.mnId,mnVenc:p.venc});
   });
   all.sort(function(a,b){ return cmpOrd(dOrd(a.status==='RECEBIDO',a.def,a.venc), dOrd(b.status==='RECEBIDO',b.def,b.venc), a.cn, b.cn); });
@@ -2996,7 +2996,7 @@ function renderDV() {
     if(fs&&e.status!==fs)return;
     if(fcat&&e.catId!==fcat)return;
     var eDate = e.data || c.dvenda || '';
-    if(!noFilterDV && !inRange(eDate,from,to))return;
+    if(!noFilterDV && !inRange(effD(e.status==='REALIZADO',e.def,eDate),from,to))return;
     all.push({v:parseFloat(e.valor)||0,catId:e.catId,desc:e.desc,data:eDate,def:e.def,status:e.status,cn:c.nome,cid:c.id,idx:i,ex:e});
   });});
   var dq=normTxt((G('dv-q')||{value:''}).value).split(' ').filter(Boolean);
@@ -3104,7 +3104,7 @@ function renderOp() {
   var rows=db.opExp.filter(function(e){
     if(fcc&&e.ccId!==fcc)return false; if(fcat&&e.catId!==fcat)return false;
     if(fs&&e.status!==fs)return false;
-    if(!noFilterOp && !inRange(e.venc,from,to))return false;
+    if(!noFilterOp && !inRange(effD(e.status==='REALIZADO',e.def,e.venc),from,to))return false;
     if(oq.length){
       var st={PREVISTO:'previsto',LANCADO:'lancado',REALIZADO:'realizado'}[e.status]||'';
       var txt=normTxt([auxN('centrosCusto',e.ccId), auxN('catOp',e.catId), e.desc, e.nf, e.nfNums?'nf '+e.nfNums:'', st, fmtM(e.valor), String(e.valor), fmtD(e.venc), fmtD(e.def)].join(' '));
@@ -3139,19 +3139,19 @@ function renderFluxo() {
   // ── Entradas do período (todos os status) ──
   var ent=[];
   db.clients.forEach(function(c){
-    cliRecs(c).forEach(function(r){
+    cashRecs(c).forEach(function(r){
       var rDate = r.venc || c.dvenda || '';
       if(inRange(rDate,from,to))
         ent.push({v:parseFloat(r.valor)||0,cn:c.nome,desc:'Recebimento de venda'+(r._card?' · '+r._label+(r._antec?' (antecipado)':(r._n>1?' — parc. '+(r._k+1)+'/'+r._n:'')):''),cliente:c.nome,venc:rDate,forma:r.forma,status:r.status});
     });
   });
   // Manutenção parcelas como entradas
-  manutAllParcelas().forEach(function(p){
+  cashManut().forEach(function(p){
     if(inRange(p.venc,from,to))
       ent.push({v:p.v,cn:'🔧 '+p.cn,desc:'Manutenção',cliente:p.cn,venc:p.venc,forma:p.forma,status:p.status});
   });
   // Outras Receitas como entradas
-  orRecs().forEach(function(r){
+  cashOrRecs().forEach(function(r){
     var d=r.dprev||r.def||'';
     if(inRange(d,from,to))
       ent.push({v:parseFloat(r.valor)||0,cn:'➕ '+auxN('catOutrasRec',r.catId),desc:r.desc||auxN('catOutrasRec',r.catId),cliente:null,venc:d,forma:r.forma||'',status:r.status});
@@ -3181,7 +3181,7 @@ function renderFluxo() {
   var accumTo = to || today();
   var tR=0, tS=0;
   db.clients.forEach(function(c){
-    cliRecs(c).forEach(function(r){
+    cashRecs(c).forEach(function(r){
       var rDate = r.venc || c.dvenda || '';
       if(rDate && rDate<=accumTo) tR+=parseFloat(r.valor)||0;
     });
@@ -3191,8 +3191,8 @@ function renderFluxo() {
     });
   });
   cashOpExp().filter(function(e){return e.venc&&e.venc<=accumTo;}).forEach(function(e){tS+=parseFloat(e.valor)||0;});
-  manutAllParcelas().forEach(function(p){if(p.venc&&p.venc<=accumTo)tR+=p.v;});
-  orRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d&&d<=accumTo)tR+=parseFloat(r.valor)||0;});
+  cashManut().forEach(function(p){if(p.venc&&p.venc<=accumTo)tR+=p.v;});
+  cashOrRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d&&d<=accumTo)tR+=parseFloat(r.valor)||0;});
   var sA = tR - tS;
 
   // ── KPIs ──
@@ -3221,12 +3221,12 @@ function renderFluxo() {
     if(!mFrom||!mTo) {
       var allDates=[];
       db.clients.forEach(function(c){
-        cliRecs(c).forEach(function(r){if(r.venc)allDates.push(r.venc);});
+        cashRecs(c).forEach(function(r){if(r.venc)allDates.push(r.venc);});
         cashCliExp(c).forEach(function(e){if(e.data)allDates.push(e.data);});
       });
       cashOpExp().forEach(function(e){if(e.venc)allDates.push(e.venc);});
-      manutAllParcelas().forEach(function(p){if(p.venc)allDates.push(p.venc);});
-      orRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d)allDates.push(d);});
+      cashManut().forEach(function(p){if(p.venc)allDates.push(p.venc);});
+      cashOrRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d)allDates.push(d);});
       allDates.sort();
       if(!mFrom) mFrom=(allDates.length?allDates[0]:curM()).slice(0,7);
       if(!mTo)   mTo=(allDates.length?allDates[allDates.length-1]:curM()).slice(0,7);
@@ -3241,12 +3241,12 @@ function renderFluxo() {
   // First: accumulate everything BEFORE the chart window
   var cum=0;
   db.clients.forEach(function(c){
-    cliRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)<cmr.mFrom)cum+=parseFloat(r.valor)||0;});
+    cashRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)<cmr.mFrom)cum+=parseFloat(r.valor)||0;});
     cashCliExp(c).forEach(function(ex){var ed=ex.data||c.dvenda||'';if(ed&&ed.slice(0,7)<cmr.mFrom)cum-=parseFloat(ex.valor)||0;});
   });
   cashOpExp().filter(function(x){return x.venc&&x.venc.slice(0,7)<cmr.mFrom;}).forEach(function(x){cum-=parseFloat(x.valor)||0;});
-  manutAllParcelas().filter(function(p){return p.venc&&p.venc.slice(0,7)<cmr.mFrom;}).forEach(function(p){cum+=p.v;});
-  orRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.slice(0,7)<cmr.mFrom;}).forEach(function(r){cum+=parseFloat(r.valor)||0;});
+  cashManut().filter(function(p){return p.venc&&p.venc.slice(0,7)<cmr.mFrom;}).forEach(function(p){cum+=p.v;});
+  cashOrRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.slice(0,7)<cmr.mFrom;}).forEach(function(r){cum+=parseFloat(r.valor)||0;});
 
   var aL=[],aD=[];
   chartMonths.forEach(function(ms){
@@ -3254,12 +3254,12 @@ function renderFluxo() {
     aL.push(d.toLocaleString('pt-BR',{month:'short',year:'2-digit'}));
     var e3=0,s3=0;
     db.clients.forEach(function(c){
-      cliRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)===ms)e3+=parseFloat(r.valor)||0;});
+      cashRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)===ms)e3+=parseFloat(r.valor)||0;});
       cashCliExp(c).forEach(function(ex){var ed=ex.data||c.dvenda||'';if(ed&&ed.slice(0,7)===ms)s3+=parseFloat(ex.valor)||0;});
     });
     cashOpExp().filter(function(x){return x.venc&&x.venc.slice(0,7)===ms;}).forEach(function(x){s3+=parseFloat(x.valor)||0;});
-    manutAllParcelas().filter(function(p){return p.venc&&p.venc.slice(0,7)===ms;}).forEach(function(p){e3+=p.v;});
-    orRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.slice(0,7)===ms;}).forEach(function(r){e3+=parseFloat(r.valor)||0;});
+    cashManut().filter(function(p){return p.venc&&p.venc.slice(0,7)===ms;}).forEach(function(p){e3+=p.v;});
+    cashOrRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.slice(0,7)===ms;}).forEach(function(r){e3+=parseFloat(r.valor)||0;});
     cum+=e3-s3;
     aD.push(Math.round(cum*100)/100);
   });
@@ -3380,12 +3380,12 @@ function renderFluxo() {
     labs.push(d.toLocaleString('pt-BR',{month:'short',year:chartMonths.length>12?'2-digit':undefined}).replace(' de ','\\n'));
     var ek=0,sk=0;
     db.clients.forEach(function(c){
-      cliRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)===mk)ek+=parseFloat(r.valor)||0;});
+      cashRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)===mk)ek+=parseFloat(r.valor)||0;});
       cashCliExp(c).forEach(function(ex){var ed=ex.data||c.dvenda||'';if(ed&&ed.slice(0,7)===mk)sk+=parseFloat(ex.valor)||0;});
     });
     cashOpExp().filter(function(x){return x.venc&&x.venc.slice(0,7)===mk;}).forEach(function(x){sk+=parseFloat(x.valor)||0;});
-    manutAllParcelas().filter(function(p){return p.venc&&p.venc.slice(0,7)===mk;}).forEach(function(p){ek+=p.v;});
-    orRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.slice(0,7)===mk;}).forEach(function(r){ek+=parseFloat(r.valor)||0;});
+    cashManut().filter(function(p){return p.venc&&p.venc.slice(0,7)===mk;}).forEach(function(p){ek+=p.v;});
+    cashOrRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.slice(0,7)===mk;}).forEach(function(r){ek+=parseFloat(r.valor)||0;});
     dE.push(Math.round(ek)); dS2.push(Math.round(sk));
   });
   if(daily){
@@ -3541,7 +3541,7 @@ function renderDash() {
     if(!refDate)(c.expenses||[]).forEach(function(e){if(e.data&&(!refDate||e.data<refDate))refDate=e.data;});
     if(inRange(refDate,from,to)){vM++;vV+=parseFloat(c.valor)||0;}
     // Recebimentos no periodo (usa dvenda como fallback se venc vazio)
-    cliRecs(c).forEach(function(r){
+    cashRecs(c).forEach(function(r){
       var rDate = r.venc || c.dvenda || '';
       if(!(inRange(rDate,from,to)))return;
       if(r.status==='RECEBIDO') rReal+=parseFloat(r.valor)||0;
@@ -3561,13 +3561,13 @@ function renderDash() {
     else dPrev+=parseFloat(e.valor)||0;
   });
   // Manutenção parcelas no período
-  manutAllParcelas().forEach(function(p){
+  cashManut().forEach(function(p){
     if(!inRange(p.venc,from,to)) return;
     if(p.status==='RECEBIDO') rReal+=p.v;
     else rPrev+=p.v;
   });
   // Outras Receitas no período
-  orRecs().forEach(function(r){
+  cashOrRecs().forEach(function(r){
     var d = r.dprev || r.def || ''; if(!inRange(d,from,to)) return;
     var v=parseFloat(r.valor)||0;
     if(r.status==='REALIZADO') rReal+=v; else rPrev+=v;
@@ -3606,10 +3606,10 @@ function renderDash() {
     // Também soma recebimentos realizados + previstos do mês (receita total)
     var recMes=0;
     db.clients.forEach(function(c){
-      cliRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)===mesMeta)recMes+=parseFloat(r.valor)||0;});
+      cashRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd.slice(0,7)===mesMeta)recMes+=parseFloat(r.valor)||0;});
     });
-    manutAllParcelas().forEach(function(p){if(p.venc&&p.venc.slice(0,7)===mesMeta)recMes+=p.v;});
-    orRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d&&d.slice(0,7)===mesMeta)recMes+=parseFloat(r.valor)||0;});
+    cashManut().forEach(function(p){if(p.venc&&p.venc.slice(0,7)===mesMeta)recMes+=p.v;});
+    cashOrRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d&&d.slice(0,7)===mesMeta)recMes+=parseFloat(r.valor)||0;});
 
     if(metaValor>0){
       var pctMeta = Math.round(vendasMes/metaValor*100);
@@ -3643,10 +3643,10 @@ function renderDash() {
     });
     var smRec=0;
     db.clients.forEach(function(c){
-      cliRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd>=sm.de+'-01'&&rd<=sm.ate+'-31')smRec+=parseFloat(r.valor)||0;});
+      cashRecs(c).forEach(function(r){var rd=r.venc||c.dvenda||'';if(rd&&rd>=sm.de+'-01'&&rd<=sm.ate+'-31')smRec+=parseFloat(r.valor)||0;});
     });
-    manutAllParcelas().forEach(function(p){if(p.venc&&p.venc>=sm.de+'-01'&&p.venc<=sm.ate+'-31')smRec+=p.v;});
-    orRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d&&d>=sm.de+'-01'&&d<=sm.ate+'-31')smRec+=parseFloat(r.valor)||0;});
+    cashManut().forEach(function(p){if(p.venc&&p.venc>=sm.de+'-01'&&p.venc<=sm.ate+'-31')smRec+=p.v;});
+    cashOrRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d&&d>=sm.de+'-01'&&d<=sm.ate+'-31')smRec+=parseFloat(r.valor)||0;});
     var pctSM = Math.round(smVendas/smValor*100);
     var pctSMBar = Math.min(pctSM,100);
     var smCls = pctSM>=100?'cg':pctSM>=70?'co':'cr';
@@ -3684,12 +3684,12 @@ function renderDash() {
       // 'all' ou sem data: descobrir do banco de dados
       var allD=[];
       db.clients.forEach(function(c){
-        cliRecs(c).forEach(function(r){var d=r.venc||c.dvenda||'';if(d)allD.push(d.slice(0,7));});
+        cashRecs(c).forEach(function(r){var d=r.venc||c.dvenda||'';if(d)allD.push(d.slice(0,7));});
         (c.expenses||[]).forEach(function(e){var d=e.data||c.dvenda||'';if(d)allD.push(d.slice(0,7));});
       });
       db.opExp.forEach(function(e){if(e.venc)allD.push(e.venc.slice(0,7));});
-      manutAllParcelas().forEach(function(p){if(p.venc)allD.push(p.venc.slice(0,7));});
-      orRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d)allD.push(d.slice(0,7));});
+      cashManut().forEach(function(p){if(p.venc)allD.push(p.venc.slice(0,7));});
+      cashOrRecs().forEach(function(r){var d=r.dprev||r.def||'';if(d)allD.push(d.slice(0,7));});
       allD.sort();
       if(!mF) mF=allD.length?allD[0]:curM();
       if(!mT) mT=allD.length?allD[allD.length-1]:curM();
@@ -3706,12 +3706,12 @@ function renderDash() {
     labs.push(d3.toLocaleString('pt-BR',{month:'short',year:rvMonths.length>12?'2-digit':undefined}));
     var e4=0,s4=0;
     db.clients.forEach(function(c){
-      cliRecs(c).forEach(function(r){var rd3=r.venc||c.dvenda||'';if(rd3&&rd3.indexOf(m3)===0)e4+=parseFloat(r.valor)||0;});
+      cashRecs(c).forEach(function(r){var rd3=r.venc||c.dvenda||'';if(rd3&&rd3.indexOf(m3)===0)e4+=parseFloat(r.valor)||0;});
       cashCliExp(c).forEach(function(ex){var ed3=ex.data||c.dvenda||'';if(ed3&&ed3.indexOf(m3)===0)s4+=parseFloat(ex.valor)||0;});
     });
     cashOpExp().filter(function(x){return x.venc&&x.venc.indexOf(m3)===0;}).forEach(function(x){s4+=parseFloat(x.valor)||0;});
-    manutAllParcelas().filter(function(p){return p.venc&&p.venc.indexOf(m3)===0;}).forEach(function(p){e4+=p.v;});
-    orRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.indexOf(m3)===0;}).forEach(function(r){e4+=parseFloat(r.valor)||0;});
+    cashManut().filter(function(p){return p.venc&&p.venc.indexOf(m3)===0;}).forEach(function(p){e4+=p.v;});
+    cashOrRecs().filter(function(r){var d=r.dprev||r.def||'';return d&&d.indexOf(m3)===0;}).forEach(function(r){e4+=parseFloat(r.valor)||0;});
     dE.push(Math.round(e4));dS3.push(Math.round(s4));
   });
   var c1=G('ch-rv');if(c1._ci)c1._ci.destroy();
@@ -3720,9 +3720,9 @@ function renderDash() {
   var c2=G('ch-st');if(c2._ci)c2._ci.destroy();
   c2._ci=new Chart(c2,{type:'doughnut',data:{labels:['Vendido','Em Inst.','Entregue','Treinado'],datasets:[{data:[sc.VENDIDO,sc.EM_INSTALACAO,sc.ENTREGUE,sc.TREINADO],backgroundColor:['#1B4F8A','#E8901A','#2D6A4F','#1A6472'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:8}}},cutout:'62%'}});
   var in7=new Date();in7.setDate(in7.getDate()+7);var prox=[];
-  db.clients.forEach(function(c){cliRecs(c).forEach(function(r){if(r.venc&&r.status!=='RECEBIDO'){var d4=new Date(r.venc+'T12:00:00');if(d4>=new Date()&&d4<=in7)prox.push({v:parseFloat(r.valor)||0,cn:c.nome,venc:r.venc});}});});
-  manutAllParcelas().forEach(function(p){if(p.venc&&p.status!=='RECEBIDO'){var d5=new Date(p.venc+'T12:00:00');if(d5>=new Date()&&d5<=in7)prox.push({v:p.v,cn:'🔧 '+p.cn,venc:p.venc});}});
-  orRecs().forEach(function(r){if(r.dprev&&r.status!=='REALIZADO'){var d6=new Date(r.dprev+'T12:00:00');if(d6>=new Date()&&d6<=in7)prox.push({v:parseFloat(r.valor)||0,cn:'➕ '+auxN('catOutrasRec',r.catId),venc:r.dprev});}});
+  db.clients.forEach(function(c){cashRecs(c).forEach(function(r){if(r.venc&&r.status!=='RECEBIDO'){var d4=new Date(r.venc+'T12:00:00');if(d4>=new Date()&&d4<=in7)prox.push({v:parseFloat(r.valor)||0,cn:c.nome,venc:r.venc});}});});
+  cashManut().forEach(function(p){if(p.venc&&p.status!=='RECEBIDO'){var d5=new Date(p.venc+'T12:00:00');if(d5>=new Date()&&d5<=in7)prox.push({v:p.v,cn:'🔧 '+p.cn,venc:p.venc});}});
+  cashOrRecs().forEach(function(r){if(r.dprev&&r.status!=='REALIZADO'){var d6=new Date(r.dprev+'T12:00:00');if(d6>=new Date()&&d6<=in7)prox.push({v:parseFloat(r.valor)||0,cn:'➕ '+auxN('catOutrasRec',r.catId),venc:r.dprev});}});
   prox.sort(function(a,b){return a.venc>b.venc?1:-1;});
   G('prox-cnt').textContent=prox.length;
   G('prox-list').innerHTML=prox.length?prox.map(function(r){return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px"><div><div style="font-weight:500">'+r.cn+'</div><div style="font-size:11px;color:var(--tx2)">'+fmtD(r.venc)+'</div></div><span class="money pos">'+fmtM(r.v)+'</span></div>';}).join('')+'<div style="padding:4px 0"></div>':'<div style="padding:16px;text-align:center;color:var(--tx3)">Nenhum nos proximos 7 dias</div>';
@@ -3786,10 +3786,16 @@ function nfSyncAll(){
   (db.opExp||[]).forEach(function(e){ each(e,false); });
 }
 // Valor de uma despesa que ainda vai para o caixa sozinho (sem NF)
+function effD(pago, def, prev){ return (pago && def) ? def : prev; }
+function cashRecs(c){ return cliRecs(c).map(function(r){ return (r.status==='RECEBIDO' && r.def) ? Object.assign({},r,{venc:r.def}) : r; }); }
+function cashManut(){ return manutAllParcelas().map(function(p){ return (p.status==='RECEBIDO' && p.def) ? Object.assign({},p,{venc:p.def}) : p; }); }
+function cashOrRecs(){ return orRecs().map(function(r){ return (r.status==='REALIZADO' && r.def) ? Object.assign({},r,{dprev:r.def}) : r; }); }
 function expCashVal(e){ var v=parseFloat(e.valor)||0; if(e.nfFull) return 0; if(e.nfCov) return Math.max(0, r2(v-e.nfCov)); return v; }
 function cashCliExp(c){
   var out=[]; (c.expenses||[]).forEach(function(e){ var v=expCashVal(e); if(v<=0) return;
-    out.push(e.nfCov? Object.assign({},e,{valor:v, desc:(e.desc||auxN('catDespesas',e.catId))+' (saldo sem NF)'}) : e); });
+    var x=e.nfCov? Object.assign({},e,{valor:v, desc:(e.desc||auxN('catDespesas',e.catId))+' (saldo sem NF)'}) : e;
+    if(x.status==='REALIZADO' && x.def) x=Object.assign({},x,{data:x.def});
+    out.push(x); });
   return out;
 }
 function nfAllocTxt(nf){
@@ -3803,9 +3809,9 @@ function nfAllocTxt(nf){
   return parts.join(' · ');
 }
 function cashOpExp(){
-  var out=[]; (db.opExp||[]).forEach(function(e){ var v=expCashVal(e); if(v<=0) return; out.push(e.nfCov? Object.assign({},e,{valor:v, desc:(e.desc||'')+' (saldo sem NF)'}) : e); });
+  var out=[]; (db.opExp||[]).forEach(function(e){ var v=expCashVal(e); if(v<=0) return; var x=e.nfCov? Object.assign({},e,{valor:v, desc:(e.desc||'')+' (saldo sem NF)'}) : e; if(x.status==='REALIZADO' && x.def) x=Object.assign({},x,{venc:x.def}); out.push(x); });
   (db.nfs||[]).forEach(function(nf){ var ps=nf.parcelas||[], n=ps.length, al=nfAllocTxt(nf);
-    ps.forEach(function(pp,k){ out.push({id:'nf_'+nf.id+'_'+k, venc:pp.venc, valor:parseFloat(pp.valor)||0, status:pp.status||'LANCADO', def:pp.def||'', catId:'', ccId:'',
+    ps.forEach(function(pp,k){ out.push({id:'nf_'+nf.id+'_'+k, venc:effD(pp.status==='REALIZADO',pp.def,pp.venc), valor:parseFloat(pp.valor)||0, status:pp.status||'LANCADO', def:pp.def||'', catId:'', ccId:'',
       desc:'NF '+nf.numero+' — '+nf.fornecedor+(n>1?' ('+(k+1)+'/'+n+')':''), _nf:true, _nfAlloc:al}); }); });
   return out;
 }
@@ -4678,7 +4684,7 @@ function renderSaldo() {
 
   var totalRec = 0, totalDesp = 0, recPrev = 0, despPrev = 0;
   db.clients.forEach(function(c) {
-    cliRecs(c).forEach(function(r) {
+    cashRecs(c).forEach(function(r) {
       var d = r.def || r.venc || '';
       if (!d) return;
       if (!noFilter && !inRange(d, from, to)) return;
@@ -4701,14 +4707,14 @@ function renderSaldo() {
     else despPrev += parseFloat(e.valor)||0;
   });
   // Manutenção parcelas no saldo
-  manutAllParcelas().forEach(function(p) {
+  cashManut().forEach(function(p) {
     var d = p.venc || ''; if (!d) return;
     if (!noFilter && !inRange(d, from, to)) return;
     if (p.status==='RECEBIDO') totalRec += p.v;
     else recPrev += p.v;
   });
   // Outras Receitas no saldo
-  orRecs().forEach(function(r) {
+  cashOrRecs().forEach(function(r) {
     var d = r.dprev || r.def || ''; if (!d) return;
     if (!noFilter && !inRange(d, from, to)) return;
     var v=parseFloat(r.valor)||0;
@@ -4734,12 +4740,12 @@ function renderSaldo() {
     saldoIni = 0;
     var bef = function(d){ return d && d < from; };
     db.clients.forEach(function(c){
-      cliRecs(c).forEach(function(r){ if (r.status==='RECEBIDO' && bef(r.def || r.venc || '')) saldoIni += parseFloat(r.valor)||0; });
+      cashRecs(c).forEach(function(r){ if (r.status==='RECEBIDO' && bef(r.def || r.venc || '')) saldoIni += parseFloat(r.valor)||0; });
       cashCliExp(c).forEach(function(e){ if (e.status==='REALIZADO' && bef(e.data || '')) saldoIni -= parseFloat(e.valor)||0; });
     });
     cashOpExp().forEach(function(e){ if (e.status==='REALIZADO' && bef(e.venc || '')) saldoIni -= parseFloat(e.valor)||0; });
-    manutAllParcelas().forEach(function(pp){ if (pp.status==='RECEBIDO' && bef(pp.venc || '')) saldoIni += pp.v; });
-    orRecs().forEach(function(r){ if (r.status==='REALIZADO' && bef(r.dprev || r.def || '')) saldoIni += parseFloat(r.valor)||0; });
+    cashManut().forEach(function(pp){ if (pp.status==='RECEBIDO' && bef(pp.venc || '')) saldoIni += pp.v; });
+    cashOrRecs().forEach(function(r){ if (r.status==='REALIZADO' && bef(r.dprev || r.def || '')) saldoIni += parseFloat(r.valor)||0; });
     (db.transferencias||[]).forEach(function(t){ if (!bef(t.data)) return;
       if (t.de==='saldo' && t.para!=='saldo') saldoIni -= parseFloat(t.valor)||0;
       if (t.para==='saldo' && t.de!=='saldo') saldoIni += parseFloat(t.valor)||0; });
@@ -4886,7 +4892,7 @@ function renderOutrasRec() {
     return oq.every(function(t){ return txt.indexOf(t)>=0; });
   };
   var items = (db.outrasRec||[]).filter(function(r){
-    var d = r.dprev || r.def || '';
+    var d = effD(r.status==='REALIZADO', r.def, r.dprev || r.def || '');
     if (!inRange(d, from, to)) return false;
     if (fst && r.status !== fst) return false;
     if (!orMatch(r)) return false;
@@ -4894,7 +4900,7 @@ function renderOutrasRec() {
   }).sort(function(a,b){ return cmpOrd(dOrd(a.status==='REALIZADO',a.def,a.dprev), dOrd(b.status==='REALIZADO',b.def,b.dprev), a.desc, b.desc); });
   var tReal=0, tLanc=0, tPrev=0;
   orRecs().forEach(function(r){
-    var d = r.dprev || r.def || '';
+    var d = effD(r.status==='REALIZADO', r.def, r.dprev || r.def || '');
     if (!inRange(d, from, to)) return;
     if (oq.length && !orMatch((db.outrasRec||[]).find(function(x){return x.id===r.id;})||r)) return;
     var v = parseFloat(r.valor)||0;
