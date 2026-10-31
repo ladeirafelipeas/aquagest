@@ -286,7 +286,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 30/10/2026 · 19:50</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 31/10/2026 · 08:30</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -489,6 +489,9 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
         <div class="fg s2" id="mn-cardf" style="display:none"></div>
         <div class="fg"><label>Data de Início *</label><input id="mn-inicio" type="date"></div>
         <div class="fg"><label>Data de Término *</label><input id="mn-fim" type="date"></div>
+        <div class="fg"><label>Dia da semana</label><select id="mn-dia"><option value="">— selecione —</option><option value="0">Domingo</option><option value="1">Segunda-feira</option><option value="2">Terça-feira</option><option value="3">Quarta-feira</option><option value="4">Quinta-feira</option><option value="5">Sexta-feira</option><option value="6">Sábado</option></select></div>
+        <div class="fg"><label>Turno</label><select id="mn-turno"><option value="">— selecione —</option><option value="M">Manhã</option><option value="T">Tarde</option></select></div>
+        <div class="fg s2"><label>Data de vencimento (1ª parcela) *</label><input id="mn-venc" type="date"><div style="font-size:11px;color:var(--tx3);margin-top:3px">As parcelas vencem neste dia, todo mês, durante o contrato.</div></div>
         <div class="fg s2"><label>Observações</label><textarea id="mn-obs" rows="2"></textarea></div>
       </div>
     </div>
@@ -2672,19 +2675,36 @@ function manutStatus(mn) {
   var t = today();
   return (!mn.dFim || mn.dFim >= t) ? 'ATIVO' : 'ENCERRADO';
 }
+var MN_DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'], MN_TURNO={M:'Manhã',T:'Tarde'};
+// Datas de vencimento das parcelas: uma por mês do contrato. Com "data de vencimento" definida,
+// as parcelas vencem nesse dia (1ª = data informada, depois todo mês); sem ela, no dia do início.
+function manutVencList(mn) {
+  var start = mn.dInicio, end = mn.dFim, out = [];
+  if (!start || !end) return out;
+  var n = 0, d = new Date(start + 'T12:00:00'), dEnd = new Date(end + 'T12:00:00');
+  while (d <= dEnd) { n++; d.setMonth(d.getMonth() + 1); }
+  var anchor = mn.dVenc || start, a = new Date(anchor + 'T12:00:00'), day = a.getDate();
+  for (var k = 0; k < n; k++) {
+    var y = a.getFullYear(), m = a.getMonth() + k;
+    var last = new Date(y, m + 1, 0, 12).getDate();
+    var x = new Date(y, m, Math.min(day, last), 12);
+    out.push(x.getFullYear() + '-' + String(x.getMonth()+1).padStart(2,'0') + '-' + String(x.getDate()).padStart(2,'0'));
+  }
+  return out;
+}
+function manutAgendaTxt(mn) {
+  var t = [];
+  if (mn.diaSemana !== undefined && mn.diaSemana !== '' && mn.diaSemana !== null) t.push(MN_DIAS[mn.diaSemana]);
+  if (mn.turno) t.push(MN_TURNO[mn.turno]);
+  if (mn.dVenc) t.push('vence dia ' + parseInt(mn.dVenc.slice(8,10),10));
+  return t.length ? '<div style="font-size:11px;color:var(--tx2);font-weight:400">' + t.join(' · ') + '</div>' : '';
+}
 function manutParcelas(mn) {
   // Gera array de parcelas mensais entre dInicio e dFim
-  var parc = mn.parcelas || [];
+  var parc = Array.isArray(mn.parcelas) ? mn.parcelas : [];
   var start = mn.dInicio, end = mn.dFim;
   if (!start || !end) return parc;
-  // Build expected venc list
-  var expected = [];
-  var d = new Date(start + 'T12:00:00');
-  var dEnd = new Date(end + 'T12:00:00');
-  while (d <= dEnd) {
-    expected.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
-    d.setMonth(d.getMonth() + 1);
-  }
+  var expected = manutVencList(mn);
   // Merge with existing parcelas (preserve status/def)
   var existing = {};
   parc.forEach(function(p) { existing[p.venc] = p; });
@@ -2735,6 +2755,9 @@ function openManutM(id) {
     fillFormaSelect('mn-forma', mn.forma || '');
     G('mn-inicio').value = mn.dInicio || '';
     G('mn-fim').value = mn.dFim || '';
+    G('mn-dia').value = mn.diaSemana!==undefined && mn.diaSemana!==null ? String(mn.diaSemana) : '';
+    G('mn-turno').value = mn.turno || '';
+    G('mn-venc').value = mn.dVenc || '';
     G('mn-obs').value = mn.obs || '';
   } else {
     G('m-manut-t').textContent = 'Novo Contrato';
@@ -2743,6 +2766,7 @@ function openManutM(id) {
     fillFormaSelect('mn-forma', '');
     G('mn-inicio').value = '';
     G('mn-fim').value = '';
+    G('mn-dia').value = ''; G('mn-turno').value = ''; G('mn-venc').value = '';
     G('mn-obs').value = '';
   }
   renderCardFields('mn', Object.assign({}, eManutId?((db.manut||[]).find(function(x){return x.id===eManutId;})||{}):{}, {forma:G('mn-forma').value}));
@@ -2760,6 +2784,8 @@ function saveManut() {
   if (mnMiss) { showToast('Escolha '+mnMiss); return; }
   if (!dInicio || !dFim) { showToast('Informe as datas de início e término'); return; }
   if (dFim < dInicio) { showToast('Data de término deve ser após o início'); return; }
+  var dVenc = G('mn-venc').value;
+  if (!dVenc) { showToast('Informe a data de vencimento da 1ª parcela'); return; }
   var oldMn = eManutId ? (db.manut||[]).find(function(x){return x.id===eManutId;}) : null;
   var base = {
     clienteId: oldMn ? (oldMn.clienteId||'') : '',
@@ -2768,16 +2794,26 @@ function saveManut() {
     endCliente: G('mn-end').value.trim(), bairroCliente: G('mn-bairro').value.trim(), docCliente: G('mn-doc').value.trim(),
     valor: valor,
     forma: G('mn-forma').value,
-    operadora: mnCard.operadora, bandeira: mnCard.bandeira, parcelas: mnCard.parcelas,
+    operadora: mnCard.operadora, bandeira: mnCard.bandeira,
     dInicio: dInicio,
     dFim: dFim,
+    dVenc: dVenc,
+    diaSemana: G('mn-dia').value === '' ? '' : parseInt(G('mn-dia').value, 10),
+    turno: G('mn-turno').value,
     obs: G('mn-obs').value.trim()
   };
   if (eManutId) {
     var idx = db.manut.findIndex(function(x){return x.id===eManutId;});
     if (idx >= 0) {
       // Keep existing parcelas
-      var oldParc = db.manut[idx].parcelas || [];
+      var oldParc = Array.isArray(db.manut[idx].parcelas) ? db.manut[idx].parcelas : [];
+      // Datas mudaram (novo vencimento/início)? Leva status e valores de cada parcela para a nova data, pela ordem
+      var oldList = manutVencList(db.manut[idx]), newList = manutVencList(base);
+      if (oldList.join() !== newList.join()) {
+        var byVenc = {}; oldParc.forEach(function(p){ byVenc[p.venc] = p; });
+        oldParc = [];
+        oldList.forEach(function(v, k){ var p = byVenc[v]; if (p && newList[k]) oldParc.push(Object.assign({}, p, {venc: newList[k]})); });
+      }
       db.manut[idx] = Object.assign({id: eManutId, parcelas: oldParc}, base);
       // Regenerate keeping statuses
       db.manut[idx].parcelas = manutParcelas(db.manut[idx]);
@@ -2832,7 +2868,7 @@ function renderManut() {
    +'<div class="kc cg"><div class="kl">Receita Mensal</div><div class="kv">'+fmtM(receita)+'</div><div class="ks">Líquida, contratos ativos</div></div>'
    +'<div class="kc co"><div class="kl">Total Recebido</div><div class="kv">'+fmtM(recebido)+'</div><div class="ks">Histórico completo</div></div>';
   var rows = mnList.filter(function(mn) {
-    if (q && (mn.nomeCliente||'').toLowerCase().indexOf(q) < 0) return false;
+    if (q && normTxt([mn.nomeCliente, manutAgendaTxt(mn).replace(/<[^>]+>/g,' ')].join(' ')).indexOf(normTxt(q)) < 0) return false;
     if (fs && manutStatus(mn) !== fs) return false;
     return true;
   });
@@ -2850,7 +2886,7 @@ function renderManut() {
       ? ' <span title="Contrato termina em '+renov+' dia(s) — renovar" style="display:inline-block;background:#F5C518;color:#1A1917;border-radius:10px;font-size:11px;font-weight:800;padding:0 6px;line-height:16px;margin-left:4px;cursor:help">!</span>'
       : '';
     return '<tr>'
-      + '<td style="font-weight:500">' + (mn.nomeCliente||'') + renovIcon + '</td>'
+      + '<td style="font-weight:500">' + (mn.nomeCliente||'') + renovIcon + manutAgendaTxt(mn) + '</td>'
       + '<td><span class="money pos">' + fmtM(mn.valor) + '</span></td>'
       + '<td>' + fmtD(mn.dInicio) + '</td>'
       + '<td>' + fmtD(mn.dFim) + '</td>'
@@ -5677,7 +5713,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var parc2 = manutParcelas(mn2);
       var p2 = parc2[idx2]; if (!p2) return;
       confirm2('Confirmar recebimento', fmtM(parseFloat(p2.valor||mn2.valor)||0) + ' — ' + fmtD(p2.venc) + '?', function() {
-        if (!mn2.parcelas) mn2.parcelas = [];
+        if (!Array.isArray(mn2.parcelas)) mn2.parcelas = [];
         var ep = mn2.parcelas.find(function(x){ return x.venc===p2.venc; });
         if (ep) { ep.status = 'RECEBIDO'; ep.def = today(); }
         else { mn2.parcelas.push({venc:p2.venc,status:'RECEBIDO',def:today(),obs:'',valor:mn2.valor}); }
@@ -5692,7 +5728,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!mn3) return;
       var parc3 = manutParcelas(mn3); var p3 = parc3[idx3]; if (!p3) return;
       confirm2('Desfazer recebimento', 'Reverter parcela de ' + fmtD(p3.venc) + ' para PREVISTO?', function() {
-        if (!mn3.parcelas) return;
+        if (!Array.isArray(mn3.parcelas)) return;
         var ep3 = mn3.parcelas.find(function(x){ return x.venc===p3.venc; });
         if (ep3) { ep3.status = 'PREVISTO'; ep3.def = ''; }
         sdb(); openManutParc(mid3); renderManut(); showToast('Revertido');
