@@ -286,7 +286,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 31/10/2026 · 08:30</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 10/11/2026 · 12:00</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -1614,8 +1614,28 @@ function cliRecs(c) {
   return out;
 }
 // Outras receitas com valor líquido
-function orRecs() {
+// Venda de outras receitas (uma linha por lançamento, na data da venda) — comissões, DRE e análise
+function orSales() {
   return (db.outrasRec||[]).map(function(r){ var pc=payCalc(r.valor, r); return Object.assign({}, r, {valor:pc.liq, bruto:pc.gross, taxa:pc.taxa}); });
+}
+function orRecs() {
+  var out = [];
+  (db.outrasRec||[]).forEach(function(r){
+    var base = r.dprev || r.def || '';
+    var sc = paySchedule(r.valor, base, r);
+    if (!sc.pc.card) { out.push(Object.assign({}, r, {valor:sc.pc.liq, bruto:sc.pc.gross, taxa:sc.pc.taxa})); return; }
+    // Cartão: uma linha por liquidação (antecipado = 1; não antecipado = parcelas mensais a partir de D+30)
+    sc.items.forEach(function(it){
+      var L = (r.liq||{})[it.k], st, def, val = it.v, tx = it.taxa, obs = r.obs, ajust = false;
+      if (L && L.status) { st = L.status; def = L.def; }
+      else { st = r.status || 'LANCADO'; def = st==='REALIZADO' ? (r.def||'') : ''; }
+      if (L && L.valor!=null && L.valor!=='') { val = r2(L.valor); tx = r2(it.taxa + (it.v - val)); ajust = true; }
+      if (L && L.obs) obs = L.obs;
+      out.push(Object.assign({}, r, {valor:val, bruto:it.bruto, taxa:tx, dprev:it.venc, status:st, def:def, obs:obs,
+        _card:true, _k:it.k, _n:sc.items.length, _label:sc.pc.label, _antec:sc.pc.antecipado, _prev:it.v, _ajust:ajust}));
+    });
+  });
+  return out;
 }
 function payHint(gross, base, info, simple) {
   var sc = paySchedule(gross, base, info), pc = sc.pc;
@@ -2118,7 +2138,7 @@ function comissEmp(e, m) {
     if (pM) { var bm=0; manutAllParcelas().forEach(function(x){ if (x.venc && x.venc.slice(0,7)===ref) bm+=(x.bruto!=null?x.bruto:x.v); }); var a3=r2(bm*pM/100); calc+=a3; det.push('Receitas de manutenção '+fmtM(bm)+' × '+String(pM).replace('.',',')+'% = '+fmtM(a3)); }
     if (pOP || pOT) {
       var boP=0, nbP=0, boT=0, nbT=0;
-      orRecs().forEach(function(x){ var d=x.dprev||x.def||''; if (d.slice(0,7)!==ref) return; var v=(x.bruto!=null?x.bruto:(parseFloat(x.valor)||0));
+      orSales().forEach(function(x){ var d=x.dprev||x.def||''; if (d.slice(0,7)!==ref) return; var v=(x.bruto!=null?x.bruto:(parseFloat(x.valor)||0));
         if (vid && x.vendId===vid) { boP+=v; nbP++; } else { boT+=v; nbT++; } });
       if (pOP && nbP) { var a4=r2(boP*pOP/100); calc+=a4; det.push(nbP+' outra(s) receita(s) própria(s) '+fmtM(boP)+' × '+String(pOP).replace('.',',')+'% = '+fmtM(a4)); }
       if (pOT && nbT && role!=='vendedor') { var a5=r2(boT*pOT/100); calc+=a5; det.push(nbT+' outra(s) receita(s) de terceiros '+fmtM(boT)+' × '+String(pOT).replace('.',',')+'% = '+fmtM(a5)); }
@@ -2922,12 +2942,21 @@ function renderRec() {
     if(!noFilter && !inRange(effD(p.status==='RECEBIDO',p.def,filterDate),from,to)) return;
     all.push({v:p.v,bruto:p.bruto,taxa:p.taxa,venc:filterDate,forma:p.forma,status:p.status,obs:p.obs||'',def:p.def,cn:'🔧 '+p.cn,_manut:true,mnId:p.mnId,mnVenc:p.venc});
   });
+  // Incluir outras receitas (cartão: uma linha por parcela)
+  orRecs().forEach(function(r){
+    var st = r.status==='REALIZADO' ? 'RECEBIDO' : (r.status||'PREVISTO');
+    if(fs && st!==fs) return;
+    var d = r.dprev || r.def || '';
+    if(!noFilter && !inRange(effD(st==='RECEBIDO',r.def,d),from,to)) return;
+    all.push({v:r.valor,bruto:r.bruto,taxa:r.taxa,venc:d,forma:r.forma,label:r._label,card:!!r._card,k:r._k,n:r._n,antec:r._antec,prev:r._prev,ajust:r._ajust,status:st,obs:r.obs||'',def:r.def,
+      cn:'➕ '+escA(r.desc||auxN('catOutrasRec',r.catId)),_or:true,orId:r.id});
+  });
   all.sort(function(a,b){ return cmpOrd(dOrd(a.status==='RECEBIDO',a.def,a.venc), dOrd(b.status==='RECEBIDO',b.def,b.venc), a.cn, b.cn); });
   // Busca livre (todas as palavras precisam aparecer)
   var rq=normTxt((G('rec-q')||{value:''}).value).split(' ').filter(Boolean);
   if (rq.length) all = all.filter(function(r){
     var st={PREVISTO:'previsto',LANCADO:'lancado',RECEBIDO:'recebido'}[r.status]||'';
-    var txt=normTxt([r.cn, r.forma, r.label, r.obs, st, fmtM(r.v), String(r.v), fmtD(r.venc), fmtD(r.def), r.card&&r.n>1?(r.k+1)+'/'+r.n:'', r._manut?'manutencao':''].join(' '));
+    var txt=normTxt([r.cn, r.forma, r.label, r.obs, st, fmtM(r.v), String(r.v), fmtD(r.venc), fmtD(r.def), r.card&&r.n>1?(r.k+1)+'/'+r.n:'', r._manut?'manutencao':'', r._or?'outras receitas':''].join(' '));
     return rq.every(function(t){ return txt.indexOf(t)>=0; });
   });
   var pv=0,ln=0,rb=0;
@@ -2965,6 +2994,16 @@ function renderRec() {
           +(r.status!=='RECEBIDO'?'<button class="btn bsm bok rec-ok-btn" data-cid="'+r.mnId+'" data-idx="'+r.mnVenc+'" data-manut="1">OK</button>':'')
         +'</div></td></tr>';
     }
+    if(r._or){
+      return '<tr style="background:var(--sf2);'+rowStyle+'"><td style="font-weight:500">'+r.cn+alertIcon+'</td><td>'+valCell(r)+'</td>'
+        +'<td>'+fmtD(r.venc)+'</td><td>'+formaCell(r)+'</td><td>'+bdg(r.status)+'</td><td>'+fmtD(r.def)+'</td>'
+        +'<td style="font-size:12px;color:var(--tx2)">Outras receitas'+(r.obs?' · '+escA(r.obs):'')+'</td>'
+        +'<td><div style="display:flex;gap:4px">'
+          +(r.card ? '<button class="btn bsm bs rec-parc-btn" data-cid="or:'+r.orId+'" data-idx="0" data-k="'+r.k+'">Editar</button>'
+                   : '<button class="btn bsm bs rec-or-edit-btn" data-id="'+r.orId+'">Editar</button>')
+          +(r.status!=='RECEBIDO'?'<button class="btn bsm bok rec-ok-btn" data-cid="or:'+r.orId+'" data-idx="0" data-k="'+(r.card?r.k:'')+'">OK</button>':'')
+        +'</div></td></tr>';
+    }
     return '<tr'+trStyle+'><td style="font-weight:500">'+r.cn+alertIcon+'</td><td>'+valCell(r)+'</td>'
       +'<td>'+fmtD(r.venc)+'</td><td>'+formaCell(r)+'</td><td>'+bdg(r.status)+'</td><td>'+fmtD(r.def)+'</td>'
       +'<td style="font-size:12px;color:var(--tx2)">'+(r.obs||'-')+'</td>'
@@ -2976,6 +3015,19 @@ function renderRec() {
   }).join('');
 }
 function openParcEdit(cid, idx, k) {
+  if (String(cid).indexOf('or:')===0) {
+    var oid = cid.slice(3), orr = (db.outrasRec||[]).find(function(x){return x.id===oid;}); if (!orr) return;
+    var os = orRecs().find(function(x){ return x.id===oid && String(x._k)===String(k); }); if (!os) return;
+    G('mp-cid').value=cid; G('mp-idx').value=0; G('mp-k').value=k;
+    G('mp-t').textContent = 'Parcela '+(os._n>1?(os._k+1)+'/'+os._n:'única')+' — '+(orr.desc||auxN('catOutrasRec',orr.catId));
+    G('mp-info').innerHTML = 'Outras receitas · '+escA(os.forma||'')+' · '+escA(os._label||'')+(os._antec?' · antecipado':'')
+      + '<br>Vencimento: <b>'+fmtD(os.dprev)+'</b> · Previsto: <b>'+fmtM(os._prev)+'</b>';
+    G('mp-val').value = os.valor;
+    G('mp-st').value = os.status==='REALIZADO'?'RECEBIDO':(os.status==='PREVISTO'?'PREVISTO':'LANCADO');
+    G('mp-def').value = os.def || '';
+    G('mp-obs').value = ((orr.liq||{})[k]||{}).obs || '';
+    openModal('m-parc'); return;
+  }
   var c = db.clients.find(function(x){ return x.id===cid; }); if (!c) return;
   var sub = cliRecs(c).find(function(x){ return x._idx===idx && String(x._k)===String(k); }); if (!sub) return;
   G('mp-cid').value=cid; G('mp-idx').value=idx; G('mp-k').value=k;
@@ -2990,6 +3042,18 @@ function openParcEdit(cid, idx, k) {
 }
 function saveParcEdit(restore) {
   var cid=G('mp-cid').value, idx=parseInt(G('mp-idx').value), k=G('mp-k').value;
+  if (cid.indexOf('or:')===0) {
+    var oid=cid.slice(3), orr=(db.outrasRec||[]).find(function(x){return x.id===oid;}); if (!orr) return;
+    if (!orr.liq) orr.liq = {};
+    var after = function(msg){ sdb(); closeModal('m-parc'); renderRec(); if (G('p-outras-rec')&&G('p-outras-rec').classList.contains('active')) renderOutrasRec(); showToast(msg); };
+    if (restore) { delete orr.liq[k]; after('Parcela voltou ao previsto'); return; }
+    var os = orRecs().find(function(x){ return x.id===oid && String(x._k)===String(k); });
+    var ov = parseFloat(G('mp-val').value), ost = G('mp-st').value, odef = G('mp-def').value;
+    if (isNaN(ov) || ov<0) { showToast('Informe o valor recebido'); return; }
+    if (ost==='RECEBIDO' && !odef) odef = today();
+    orr.liq[k] = {status: ost==='RECEBIDO'?'REALIZADO':ost, def: ost==='RECEBIDO'?odef:'', obs:G('mp-obs').value.trim(), valor: (os && Math.abs(ov - os._prev) > 0.004) ? r2(ov) : null};
+    after('Parcela atualizada!'); return;
+  }
   var c = db.clients.find(function(x){ return x.id===cid; }); if (!c || !c.receipts[idx]) return;
   var r = c.receipts[idx]; if (!r.liq) r.liq = {};
   if (restore) { delete r.liq[k]; sdb(); closeModal('m-parc'); renderRec(); showToast('Parcela voltou ao previsto'); return; }
@@ -3452,7 +3516,7 @@ function renderDRE() {
       if(p.status==='RECEBIDO') rR+=b; else rP+=b; addTx(p.forma,p.taxa||0);
     }
   });
-  orRecs().forEach(function(r){
+  orSales().forEach(function(r){
     var d = r.dprev || r.def || '';
     if(d && d.indexOf(month)===0){
       var b=r.bruto!=null?r.bruto:(parseFloat(r.valor)||0);
@@ -4362,7 +4426,7 @@ function renderAna() {
     if(inRange(p.venc,from,to)||noF) mixManut+=p.v;
   });
   // Outras Receitas: no período
-  orRecs().forEach(function(r){
+  orSales().forEach(function(r){
     var d=r.dprev||r.def||'';
     if(noF||inRange(d,from,to)) mixOutras+=parseFloat(r.valor)||0;
   });
@@ -4957,7 +5021,8 @@ function renderOutrasRec() {
       +'<td>'+auxN('catOutrasRec',r.catId)+'</td>'
       +'<td>'+(r.desc||'-')+'</td>'
       +'<td>'+(r.vendId?escA(auxN('vendedores',r.vendId)):'<span style="color:var(--rd);font-size:12px">sem vendedor</span>')+'</td>'
-      +'<td>'+(r.forma||'-')+'</td>'
+      +'<td>'+(r.forma||'-')+(function(){ var sc=paySchedule(r.valor, r.dprev||r.def||'', r); if(!sc.pc.card) return ''; var lq=r.liq||{}, pg=sc.items.filter(function(it){ var L=lq[it.k]; return L&&L.status ? L.status==='REALIZADO' : r.status==='REALIZADO'; }).length;
+        return '<div style="font-size:10px;color:var(--tx3)">'+escA(sc.pc.label||'')+(sc.pc.antecipado?' · antecipado em '+fmtD(sc.items[0].venc):' · 1ª em '+fmtD(sc.items[0].venc))+' · '+pg+'/'+sc.items.length+' recebida(s)</div>'; })()+'</td>'
       +'<td>'+fmtD(r.dprev)+'</td>'
       +'<td>'+fmtD(r.def)+'</td>'
       +'<td style="font-weight:500">'+(function(){var pc=payCalc(r.valor,r);return fmtM(pc.liq)+(pc.taxa?'<div style="font-size:10px;color:var(--tx3);font-weight:400">bruto '+fmtM(pc.gross)+' · taxa '+fmtM(pc.taxa)+'</div>':'');})()+'</td>'
@@ -5339,6 +5404,7 @@ document.addEventListener('DOMContentLoaded', function() {
   G('rec-tb').addEventListener('click', function(e){
     var pb=e.target.closest('.rec-parc-btn');if(pb){openParcEdit(pb.getAttribute('data-cid'),parseInt(pb.getAttribute('data-idx')),pb.getAttribute('data-k'));return;}
     var eb=e.target.closest('.rec-edit-btn');if(eb){openRecEdit(eb.getAttribute('data-cid'),parseInt(eb.getAttribute('data-idx')));return;}
+    var oe=e.target.closest('.rec-or-edit-btn');if(oe){openOrModal(oe.getAttribute('data-id'));return;}
     var ok=e.target.closest('.rec-ok-btn');if(ok){
       if(ok.getAttribute('data-manut')==='1'){
         var mid=ok.getAttribute('data-cid'), venc=ok.getAttribute('data-idx');
@@ -5352,6 +5418,16 @@ document.addEventListener('DOMContentLoaded', function() {
           else{mn.parcelas.push({venc:venc,status:'RECEBIDO',def:today(),obs:'',valor:mn.valor});}
           sdb();renderRec();showToast('Recebido!');
         });
+        return;
+      }
+      if((ok.getAttribute('data-cid')||'').indexOf('or:')===0){
+        var oid=ok.getAttribute('data-cid').slice(3), kO=ok.getAttribute('data-k')||'';
+        var orr=(db.outrasRec||[]).find(function(x){return x.id===oid;}); if(!orr) return;
+        var osub=orRecs().find(function(x){return x.id===oid && (kO===''||String(x._k)===kO);});
+        confirm2('Confirmar recebimento',fmtM(osub?osub.valor:0)+(osub?' — '+fmtD(osub.dprev):'')+'?',function(){
+          if(kO!==''){ if(!orr.liq)orr.liq={}; orr.liq[kO]=Object.assign({}, orr.liq[kO]||{}, {status:'REALIZADO',def:today()}); }
+          else { orr.status='REALIZADO'; orr.def=today(); }
+          sdb();renderRec();showToast('Recebido!'); });
         return;
       }
       var cid=ok.getAttribute('data-cid'),idx=parseInt(ok.getAttribute('data-idx')),kA=ok.getAttribute('data-k')||'';
