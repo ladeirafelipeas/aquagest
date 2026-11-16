@@ -286,7 +286,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 10/11/2026 · 12:00</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 16/11/2026 · 08:00</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -1615,6 +1615,8 @@ function cliRecs(c) {
 }
 // Outras receitas com valor líquido
 // Venda de outras receitas (uma linha por lançamento, na data da venda) — comissões, DRE e análise
+// Categorias de outras receitas que não geram comissão (ex.: Reembolsos para a Empresa)
+function orSemComissao(catId) { return normTxt(auxN('catOutrasRec', catId)).indexOf('reembolso') >= 0; }
 function orSales() {
   return (db.outrasRec||[]).map(function(r){ var pc=payCalc(r.valor, r); return Object.assign({}, r, {valor:pc.liq, bruto:pc.gross, taxa:pc.taxa}); });
 }
@@ -2138,7 +2140,7 @@ function comissEmp(e, m) {
     if (pM) { var bm=0; manutAllParcelas().forEach(function(x){ if (x.venc && x.venc.slice(0,7)===ref) bm+=(x.bruto!=null?x.bruto:x.v); }); var a3=r2(bm*pM/100); calc+=a3; det.push('Receitas de manutenção '+fmtM(bm)+' × '+String(pM).replace('.',',')+'% = '+fmtM(a3)); }
     if (pOP || pOT) {
       var boP=0, nbP=0, boT=0, nbT=0;
-      orSales().forEach(function(x){ var d=x.dprev||x.def||''; if (d.slice(0,7)!==ref) return; var v=(x.bruto!=null?x.bruto:(parseFloat(x.valor)||0));
+      orSales().forEach(function(x){ var d=x.dprev||x.def||''; if (d.slice(0,7)!==ref) return; if (orSemComissao(x.catId)) return; var v=(x.bruto!=null?x.bruto:(parseFloat(x.valor)||0));
         if (vid && x.vendId===vid) { boP+=v; nbP++; } else { boT+=v; nbT++; } });
       if (pOP && nbP) { var a4=r2(boP*pOP/100); calc+=a4; det.push(nbP+' outra(s) receita(s) própria(s) '+fmtM(boP)+' × '+String(pOP).replace('.',',')+'% = '+fmtM(a4)); }
       if (pOT && nbT && role!=='vendedor') { var a5=r2(boT*pOT/100); calc+=a5; det.push(nbT+' outra(s) receita(s) de terceiros '+fmtM(boT)+' × '+String(pOT).replace('.',',')+'% = '+fmtM(a5)); }
