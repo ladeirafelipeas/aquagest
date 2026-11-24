@@ -286,7 +286,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 16/11/2026 · 08:00</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 24/11/2026 · 18:00</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -767,7 +767,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <th style="text-align:center">× Avaliação<br>de Ponto</th><th style="text-align:center">× Avaliação<br>do CRM</th><th style="text-align:center">× Mult. Aval.<br>Cliente</th>
       <th style="text-align:right">= Comissão<br>final</th>
       <th style="text-align:center">Google 5★<br><span style="font-weight:400;text-transform:none">(qtd)</span></th><th style="text-align:center">Indicações<br><span style="font-weight:400;text-transform:none">(qtd)</span></th>
-      <th style="text-align:right">+ Bônus</th><th style="text-align:right">= Total<br>a pagar</th></tr></thead>
+      <th style="text-align:right">+ Bônus</th><th style="text-align:right">= Total<br>a pagar</th><th style="text-align:center">Ajuste<br>manual (R$)</th></tr></thead>
       <tbody id="cm-tb"></tbody>
     </table></div></div>
   </div>
@@ -2103,6 +2103,9 @@ function manutAtivosPagos(m){
   return (db.manut||[]).filter(function(mn){ return (parseFloat(mn.valor)||0)>0 && mn.dInicio && mn.dFim && mn.dInicio<=fim && mn.dFim>=ini; });
 }
 function cmIdx(v){ if(v===''||v==null) return 1; var n=parseFloat(v); return isNaN(n)?1:n; }
+// Ajuste manual: valor digitado que substitui o total calculado do colaborador no mês
+function cmTemAjuste(inp){ return !!inp && inp.ajuste!==undefined && inp.ajuste!==null && inp.ajuste!=='' && !isNaN(parseFloat(inp.ajuste)); }
+function cmTotalHtml(r){ return fmtM(r.total)+(r.ajustado?'<div style="font-size:10px;font-weight:600;color:var(--or,#C77700);font-family:var(--fn)">ajustado · calculado '+fmtM(r.totalCalc)+'</div>':''); }
 function comissEmp(e, m) {
   var cm=db.comissoes||{}, f=gAux('funcoes').find(function(x){ return x.id===e.funcaoId; }), role=funcRole(f), fid=f?f.id:'';
   var inp=((db.comissMes||{})[m]||{})[e.id]||{};
@@ -2158,7 +2161,10 @@ function comissEmp(e, m) {
   var mUse = mAval===null ? 1 : mAval;
   calc=r2(calc);
   return {e:e, f:f, role:role, regra:regra, det:det, calc:calc, bonus:bonus, ponto:ponto, crm:crm, inp:inp,
-    mAval:mAval, mAvalInfo:mAvalInfo, usaMult:usaMultAval(f), final:r2(calc*ponto*crm*mUse), total:r2(r2(calc*ponto*crm*mUse) + bonus)};
+    mAval:mAval, mAvalInfo:mAvalInfo, usaMult:usaMultAval(f), final:r2(calc*ponto*crm*mUse),
+    totalCalc:r2(r2(calc*ponto*crm*mUse) + bonus),
+    ajustado: cmTemAjuste(inp),
+    total: cmTemAjuste(inp) ? r2(parseFloat(inp.ajuste)) : r2(r2(calc*ponto*crm*mUse) + bonus)};
 }
 // Meses que podem ter comissão (dados existentes até o mês atual / seguinte)
 function comMonths() {
@@ -2222,8 +2228,11 @@ function renderComissMes() {
       +'<td style="text-align:center">'+num(r.e.id,'google',r.inp.google,'0','1')+'</td>'
       +'<td style="text-align:center">'+num(r.e.id,'indic',r.inp.indic,'0','1')+'</td>'
       +'<td style="text-align:right;font-family:var(--mo)" class="cm-bonus">'+fmtM(r.bonus)+'</td>'
-      +'<td style="text-align:right;font-family:var(--mo);font-weight:700" class="cm-total">'+fmtM(r.total)+'</td></tr>';
-  }).join('') + '<tr class="cm-tot"><td colspan="10">Total de comissões — '+mesLbl(m)+'</td><td style="text-align:right;font-family:var(--mo)" id="cm-grand"></td></tr>';
+      +'<td style="text-align:right;font-family:var(--mo);font-weight:700" class="cm-total">'+cmTotalHtml(r)+'</td>'
+      +'<td style="text-align:center;white-space:nowrap"><input type="number" class="cm-aj" min="0" step="0.01" data-emp="'+r.e.id+'" placeholder="R$" value="'+(r.ajustado?r.inp.ajuste:'')+'" style="width:96px;padding:5px 6px;text-align:right">'
+        +'<div style="display:flex;gap:4px;justify-content:center;margin-top:4px"><button type="button" class="btn bsm bp cm-aj-btn" data-emp="'+r.e.id+'">Ajustar</button>'
+        +(r.ajustado?'<button type="button" class="btn bsm bs cm-aj-del" data-emp="'+r.e.id+'" title="Voltar ao valor calculado">Remover</button>':'')+'</div></td></tr>';
+  }).join('') + '<tr class="cm-tot"><td colspan="10">Total de comissões — '+mesLbl(m)+'</td><td style="text-align:right;font-family:var(--mo)" id="cm-grand"></td><td></td></tr>';
   updCmTotals(rows);
 }
 function cmAvalLine(m) {
@@ -2241,12 +2250,12 @@ function updCmTotals(rows) {
   rows.forEach(function(r){
     tCalc+=r.calc; tFin+=r.final; tBon+=r.bonus; tTot+=r.total;
     var tr=document.querySelector('#cm-tb tr[data-emp="'+r.e.id+'"]');
-    if (tr) { tr.querySelector('.cm-final').textContent=fmtM(r.final); tr.querySelector('.cm-bonus').textContent=fmtM(r.bonus); tr.querySelector('.cm-total').textContent=fmtM(r.total); }
+    if (tr) { tr.querySelector('.cm-final').textContent=fmtM(r.final); tr.querySelector('.cm-bonus').textContent=fmtM(r.bonus); tr.querySelector('.cm-total').innerHTML=cmTotalHtml(r); }
   });
   if (G('cm-grand')) G('cm-grand').textContent=fmtM(tTot);
   G('cm-kpis').innerHTML='<div class="kc ca"><div class="kl">Comissão final</div><div class="kv">'+fmtM(tFin)+'</div><div class="ks">calculada '+fmtM(tCalc)+' × índices</div></div>'
     +'<div class="kc co"><div class="kl">Bônus (Google + Indicações)</div><div class="kv">'+fmtM(tBon)+'</div></div>'
-    +'<div class="kc cr"><div class="kl">Total a pagar</div><div class="kv">'+fmtM(tTot)+'</div><div class="ks">comissão final + bônus</div></div>'
+    +'<div class="kc cr"><div class="kl">Total a pagar</div><div class="kv">'+fmtM(tTot)+'</div><div class="ks">comissão final + bônus'+(function(){ var n=rows.filter(function(r){return r.ajustado;}).length; return n?' · '+n+' ajuste'+(n>1?'s':'')+' manual'+(n>1?'is':''):''; })()+'</div></div>'
     +'<div class="kc"><div class="kl">Colaboradores</div><div class="kv">'+rows.filter(function(r){return r.total>0;}).length+' / '+rows.length+'</div><div class="ks">com comissão no mês</div></div>';
 }
 
@@ -5335,6 +5344,18 @@ document.addEventListener('DOMContentLoaded', function() {
     updCmTotals();
     clearTimeout(cmT); cmT=setTimeout(function(){ sdb(); var x=db.opExp.find(function(o){return o.comAuto===m;}); G('cm-info').innerHTML=G('cm-info').innerHTML; renderCmInfoOnly(); },500);
   });
+  G('cm-tb').addEventListener('click', function(e){
+    var ab=e.target.closest('.cm-aj-btn'), db2=e.target.closest('.cm-aj-del'); if(!ab && !db2) return;
+    var emp=(ab||db2).getAttribute('data-emp'), m=G('cm-mes').value||curM();
+    if(!db.comissMes) db.comissMes={}; if(!db.comissMes[m]) db.comissMes[m]={}; if(!db.comissMes[m][emp]) db.comissMes[m][emp]={};
+    if(ab){
+      var inpEl=document.querySelector('#cm-tb .cm-aj[data-emp="'+emp+'"]'), v=inpEl?inpEl.value:'';
+      if(v===''||isNaN(parseFloat(v))||parseFloat(v)<0){ showToast('Digite o valor da comissão para ajustar'); if(inpEl) inpEl.focus(); return; }
+      db.comissMes[m][emp].ajuste=r2(parseFloat(v)); showToast('Comissão ajustada');
+    } else { delete db.comissMes[m][emp].ajuste; showToast('Ajuste removido — voltou ao valor calculado'); }
+    sdb(); renderComissMes(); renderCmInfoOnly();
+  });
+  G('cm-tb').addEventListener('keydown', function(e){ if(e.key==='Enter' && e.target.classList.contains('cm-aj')){ e.preventDefault(); var b=document.querySelector('#cm-tb .cm-aj-btn[data-emp="'+e.target.getAttribute('data-emp')+'"]'); if(b) b.click(); } });
   G('p-comissoes').addEventListener('click', function(e){
     var b=e.target.closest('[data-fxact]'); if(!b) return;
     var cm=db.comissoes; if(!cm.faixasAval) cm.faixasAval=[];
