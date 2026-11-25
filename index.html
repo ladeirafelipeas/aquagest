@@ -286,7 +286,7 @@ body.locked #auth-ov{display:flex} body.locked #app{visibility:hidden}
       <div id="cloud-st" class="cloud-st">Conectando&hellip;</div>
       <button class="btn bs bsm" id="btn-logout" style="width:100%;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)">&#128682; Sair</button></div>
     <div style="margin-bottom:8px" id="sb-mode">Dados salvos no navegador &middot; v3.0</div>
-    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 24/11/2026 · 18:00</div>
+    <div style="margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.35)" id="sb-ver">Versão 25/11/2026 · 11:30</div>
     <div style="display:flex;gap:6px">
       <button class="btn bs bsm" onclick="exportDB()" style="flex:1;justify-content:center;font-size:11px;padding:5px 6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border-color:rgba(255,255,255,.15)" title="Baixar backup JSON">&#128190; Exportar</button>
       <label style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border-radius:var(--rs);font-size:11px;font-weight:500;cursor:pointer;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);white-space:nowrap" title="Restaurar backup JSON">&#128229; Importar<input type="file" accept=".json" style="display:none;width:auto" onchange="importDB(this)"></label>
@@ -2738,7 +2738,8 @@ function manutParcelas(mn) {
   var expected = manutVencList(mn);
   // Merge with existing parcelas (preserve status/def)
   var existing = {};
-  parc.forEach(function(p) { existing[p.venc] = p; });
+  // vencBase = data original do calendário quando o vencimento foi editado manualmente
+  parc.forEach(function(p) { existing[p.vencBase || p.venc] = p; });
   return expected.map(function(venc) {
     return existing[venc] || {venc: venc, status: 'PREVISTO', def: '', obs: '', valor: mn.valor};
   });
@@ -2841,9 +2842,9 @@ function saveManut() {
       // Datas mudaram (novo vencimento/início)? Leva status e valores de cada parcela para a nova data, pela ordem
       var oldList = manutVencList(db.manut[idx]), newList = manutVencList(base);
       if (oldList.join() !== newList.join()) {
-        var byVenc = {}; oldParc.forEach(function(p){ byVenc[p.venc] = p; });
+        var byVenc = {}; oldParc.forEach(function(p){ byVenc[p.vencBase || p.venc] = p; });
         oldParc = [];
-        oldList.forEach(function(v, k){ var p = byVenc[v]; if (p && newList[k]) oldParc.push(Object.assign({}, p, {venc: newList[k]})); });
+        oldList.forEach(function(v, k){ var p = byVenc[v]; if (p && newList[k]) { var np = Object.assign({}, p, {venc: newList[k]}); delete np.vencBase; oldParc.push(np); } });
       }
       db.manut[idx] = Object.assign({id: eManutId, parcelas: oldParc}, base);
       // Regenerate keeping statuses
@@ -5354,6 +5355,16 @@ document.addEventListener('DOMContentLoaded', function() {
       db.comissMes[m][emp].ajuste=r2(parseFloat(v)); showToast('Comissão ajustada');
     } else { delete db.comissMes[m][emp].ajuste; showToast('Ajuste removido — voltou ao valor calculado'); }
     sdb(); renderComissMes(); renderCmInfoOnly();
+    // Despesa do mês já Lançada/Realizada não é atualizada sozinha: pergunta se deve atualizar
+    var exC=db.opExp.find(function(x){ return x.comAuto===m; });
+    if (exC && exC.status!=='PREVISTO') {
+      var totC=0; gAux('funcionarios').filter(function(f){ return f.active; }).forEach(function(f){ totC+=comissEmp(f,m).total; }); totC=r2(totC);
+      if (Math.abs(totC-(parseFloat(exC.valor)||0))>0.004) {
+        var stL=exC.status==='LANCADO'?'Lançada':'Realizada';
+        confirm2('Atualizar despesa de comissões','A despesa "'+exC.desc+'" já está '+stL+' com '+fmtM(exC.valor)+'. Atualizar o valor para o novo total de '+fmtM(totC)+'?',function(){
+          exC.valor=totC; sdb(); renderCmInfoOnly(); showToast('Despesa de comissões atualizada para '+fmtM(totC)); });
+      }
+    }
   });
   G('cm-tb').addEventListener('keydown', function(e){ if(e.key==='Enter' && e.target.classList.contains('cm-aj')){ e.preventDefault(); var b=document.querySelector('#cm-tb .cm-aj-btn[data-emp="'+e.target.getAttribute('data-emp')+'"]'); if(b) b.click(); } });
   G('p-comissoes').addEventListener('click', function(e){
@@ -5569,8 +5580,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var ep=mn.parcelas.find(function(x){return x.venc===vencOrig;});
     var newVenc=G('mre-venc').value||vencOrig;
     var updates={venc:newVenc,valor:G('mre-valor').value,forma:G('mre-forma').value,operadora:mreCard.operadora,bandeira:mreCard.bandeira,parcelas:mreCard.parcelas,status:G('mre-st').value,def:G('mre-def').value,obs:G('mre-obs').value};
-    if(ep){ Object.assign(ep,updates); if(newVenc!==vencOrig) ep.venc=newVenc; }
-    else { mn.parcelas.push(updates); }
+    if(ep){
+      var base=ep.vencBase||ep.venc;
+      Object.assign(ep,updates);
+      if(newVenc!==base) ep.vencBase=base; else delete ep.vencBase;
+    } else {
+      if(newVenc!==vencOrig) updates.vencBase=vencOrig;
+      mn.parcelas.push(updates);
+    }
     sdb(); closeModal('m-manut-rec-edit'); renderRec(); showToast('Parcela atualizada!');
   });
 
